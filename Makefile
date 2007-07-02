@@ -20,18 +20,8 @@ BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
              $(PSPLIB)/kybd.o $(PSPLIB)/perf.o
 BUILD_SMSPLUS=psp/main.o
 
-OBJS=$(BUILD_PSPLIB) $(BUILD_Z80) $(BUILD_MINIZIP) $(BUILD_SOUND) \
+OBJS=$(BUILD_PSPLIB) $(BUILD_SOUND) $(BUILD_Z80) $(BUILD_MINIZIP) \
      $(BUILD_SMS) $(BUILD_SMSPLUS)
-
-#OBJ	+=	main.o	\
-#		sealintf.o	\
-#		config.o	\
-#		expand.o	\
-#		blur.o	\
-#		blit.o	\
-#		ui.o	\
-#		video.o	\
-#		input.o
 
 CFLAGS = -O2 -G0 -Wall -DLSB_FIRST -DPSP
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti

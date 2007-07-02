@@ -44,6 +44,8 @@ int load_rom(char *filename)
     }
     else
     {
+        strcpy(game_name, filename);
+
         FILE *fd = NULL;
 
         fd = fopen(filename, "rb");
