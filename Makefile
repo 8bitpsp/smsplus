@@ -2,23 +2,27 @@ PSPSDK=$(shell psp-config --pspsdk-path)
 
 DATA=./data
 PSPLIB=./psplib
+SMSPPSP=./psp
+SOUND=./sound
+Z80=./cpu
 
 TARGET=smsppsp
 EXTRA_TARGETS=EBOOT.PBP
 PSP_EBOOT_TITLE=SMS Plus PSP 1.2.1
 PSP_EBOOT_ICON=$(DATA)/smsp-icon.png
 
-BUILD_Z80=cpu/z80.o
+BUILD_Z80=$(Z80)/z80.o
 BUILD_SMS=sms.o	pio.o memz80.o render.o vdp.o \
           system.o error.o fileio.o state.o loadrom.o
 BUILD_MINIZIP=unzip/ioapi.o unzip/unzip.o
-BUILD_SOUND=sound/sound.o sound/sn76489.o sound/emu2413.o \
-            sound/ym2413.o sound/fmintf.o sound/stream.o
+BUILD_SOUND=$(SOUND)/sound.o $(SOUND)/sn76489.o $(SOUND)/emu2413.o \
+            $(SOUND)/ym2413.o $(SOUND)/fmintf.o $(SOUND)/stream.o
 BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
              $(PSPLIB)/video.o $(PSPLIB)/audio.o $(PSPLIB)/fileio.o \
              $(PSPLIB)/menu.o $(PSPLIB)/ui.o $(PSPLIB)/ctrl.o \
              $(PSPLIB)/kybd.o $(PSPLIB)/perf.o
-BUILD_SMSPLUS=psp/main.o
+BUILD_SMSPLUS=$(SMSPPSP)/system.o $(SMSPPSP)/emumain.o $(SMSPPSP)/menu.o \
+              $(SMSPPSP)/main.o
 
 OBJS=$(BUILD_PSPLIB) $(BUILD_SOUND) $(BUILD_Z80) $(BUILD_MINIZIP) \
      $(BUILD_SMS) $(BUILD_SMSPLUS)
@@ -26,7 +30,7 @@ OBJS=$(BUILD_PSPLIB) $(BUILD_SOUND) $(BUILD_Z80) $(BUILD_MINIZIP) \
 CFLAGS=-O2 -G0 -Wall -DLSB_FIRST -DPSP
 CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS=$(CFLAGS)
-INCDIR += $(PSPLIB) ./cpu ./sound ./unzip
+INCDIR=$(PSPLIB) ./cpu ./sound ./unzip
 LIBS=-lz -lm -lc -lpng -lpspgu -lpsppower -lpspaudio -lpsprtc
 
 include $(PSPSDK)/lib/build.mak
