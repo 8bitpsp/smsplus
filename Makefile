@@ -1,17 +1,17 @@
 PSPSDK=$(shell psp-config --pspsdk-path)
 
-TARGET=sppsp
-EXTRA_TARGETS=EBOOT.PBP
-PSP_EBOOT_TITLE=SMS Plus PSP 1.2.1
-#PSP_EBOOT_ICON=$(DATA)/vba-icon.png
-
 DATA=./data
 PSPLIB=./psplib
 
+TARGET=smsppsp
+EXTRA_TARGETS=EBOOT.PBP
+PSP_EBOOT_TITLE=SMS Plus PSP 1.2.1
+PSP_EBOOT_ICON=$(DATA)/smsp-icon.png
+
 BUILD_Z80=cpu/z80.o
-BUILD_SMS=sms.o	pio.o	memz80.o render.o	vdp.o	\
-          system.o error.o fileio.o	state.o	loadrom.o
-BUILD_MINIZIP=unzip/ioapi.o	unzip/unzip.o
+BUILD_SMS=sms.o	pio.o memz80.o render.o vdp.o \
+          system.o error.o fileio.o state.o loadrom.o
+BUILD_MINIZIP=unzip/ioapi.o unzip/unzip.o
 BUILD_SOUND=sound/sound.o sound/sn76489.o sound/emu2413.o \
             sound/ym2413.o sound/fmintf.o sound/stream.o
 BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
@@ -23,11 +23,11 @@ BUILD_SMSPLUS=psp/main.o
 OBJS=$(BUILD_PSPLIB) $(BUILD_SOUND) $(BUILD_Z80) $(BUILD_MINIZIP) \
      $(BUILD_SMS) $(BUILD_SMSPLUS)
 
-CFLAGS = -O2 -G0 -Wall -DLSB_FIRST -DPSP
-CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
-ASFLAGS = $(CFLAGS)
+CFLAGS=-O2 -G0 -Wall -DLSB_FIRST -DPSP
+CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti
+ASFLAGS=$(CFLAGS)
 INCDIR += $(PSPLIB) ./cpu ./sound ./unzip
-LIBS= -lz -lm -lc -lpng -lpspgu -lpsppower -lpspaudio -lpsprtc
+LIBS=-lz -lm -lc -lpng -lpspgu -lpsppower -lpspaudio -lpsprtc
 
 include $(PSPSDK)/lib/build.mak
 

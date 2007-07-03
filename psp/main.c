@@ -48,6 +48,8 @@ int main(int argc,char *argv[])
 
 
 
+  load_rom("sonic.sms");
+
   /* Initialize screen buffer */
   Screen = pspImageCreate(256, 256);
   pspImageClear(Screen, 0x8000);
@@ -69,12 +71,10 @@ int main(int argc,char *argv[])
   snd.fps = FPS_NTSC;
   snd.fm_clock = CLOCK_NTSC;
   snd.psg_clock = CLOCK_NTSC;
-  snd.sample_rate = 0; //44100;
+  snd.sample_rate = 44100;
   snd.mixer_callback = NULL;
 
-  cart.rom = NULL;
-
-  load_rom("sonic.sms");
+//  cart.rom = NULL;
 
   /* Initialize the virtual console emulation */
   system_init();
@@ -143,7 +143,14 @@ void osd_update_video(void)
 /* Save or load SRAM */
 void system_manage_sram(uint8 *sram, int slot, int mode)
 {
-  memset(sram, 0x00, 0x8000);
+  switch(mode)
+  {
+  case SRAM_SAVE:
+    break;
+  case SRAM_LOAD:
+    memset(sram, 0x00, 0x8000);
+    break;
+  }
 /*
     char name[PATH_MAX];
     FILE *fd;
