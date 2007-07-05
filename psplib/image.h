@@ -23,7 +23,7 @@ struct PspImage
 {
   int Width;
   int Height;
-  unsigned short* __attribute__((aligned(16))) Pixels;
+  unsigned short* Pixels;
 };
 
 typedef struct PspImage PspImage;

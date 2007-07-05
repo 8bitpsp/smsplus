@@ -1,3 +1,13 @@
+/** PSP helper library ***************************************/
+/**                                                         **/
+/**                          audio.c                        **/
+/**                                                         **/
+/** This file contains the audio rendering library. It is   **/
+/** based almost entirely on the pspaudio library by Adresd **/
+/** and Marcus R. Brown, 2005.                              **/
+/**                                                         **/
+/** Akop Karapetyan 2007                                    **/
+/*************************************************************/
 #include "audio.h"
 
 #include <stdio.h>
@@ -139,7 +149,7 @@ int pspAudioInit(int sample_count)
     return 0;
   }
 
-  return 1;
+  return SampleCount;
 }
 
 void pspAudioShutdown()

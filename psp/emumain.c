@@ -25,16 +25,16 @@ inline void RenderAudio();
 void InitEmulator()
 {
   /* Initialize screen buffer */
-  Screen = pspImageCreate(512, 272);
+  Screen = pspImageCreate(256, 256);
   pspImageClear(Screen, 0x8000);
 
   /* Set up bitmap structure */
   memset(&bitmap, 0, sizeof(bitmap_t));
-  bitmap.width  = 256; //Screen->Width;
-  bitmap.height = 256; //Screen->Height;
+  bitmap.width  = Screen->Width;
+  bitmap.height = Screen->Height;
   bitmap.depth  = 16;
   bitmap.granularity = (bitmap.depth >> 3);
-  bitmap.pitch  = 512; //bitmap.width * bitmap.granularity;
+  bitmap.pitch  = bitmap.width * bitmap.granularity;
   bitmap.data   = (uint8 *)Screen->Pixels;
   bitmap.viewport.x = 0;
   bitmap.viewport.y = 0;
@@ -134,7 +134,7 @@ void RenderVideo()
   pspVideoBegin();
 
   /* Draw the screen */
-  pspVideoPutImageDirect(Screen, 0, 0, Screen->Width, Screen->Height);
+  pspVideoPutImageDirect(Screen, 0, 0, Screen->Width + 10, Screen->Height + 10);
 
   /* Show FPS counter */
   if (ShowFPS)
@@ -164,7 +164,7 @@ void AudioCallback(void* buf, unsigned int *length, void *userdata)
   PspSample *OutBuf = (PspSample*)buf;
   int i;
 
-  for(i=0;i<*length;i++) 
+  for(i = 0; i < *length; i++) 
   {
     OutBuf[i].Left = snd.output[0][i];
     OutBuf[i].Right = snd.output[1][i];

@@ -26,12 +26,11 @@ static void pspImageDrawVLine(PspImage *image, int x, int sy, int dy, unsigned s
 PspImage* pspImageCreate(int width, int height)
 {
   int size = width * height * sizeof(unsigned short);
-  unsigned short* pixels = (unsigned short*)malloc(size);
+  unsigned short* pixels = (unsigned short*)memalign(16, size);
 
   if (!pixels) return NULL;
 
-  PspImage *image =
-    (PspImage*)malloc(sizeof(PspImage));
+  PspImage *image = (PspImage*)malloc(sizeof(PspImage));
 
   if (!image)
   {

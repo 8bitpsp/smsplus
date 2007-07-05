@@ -1,3 +1,13 @@
+/** PSP helper library ***************************************/
+/**                                                         **/
+/**                          audio.h                        **/
+/**                                                         **/
+/** This file contains definitions for the audio rendering  **/
+/** library. It is based almost entirely on the pspaudio    **/
+/** library by Adresd and Marcus R. Brown, 2005.            **/
+/**                                                         **/
+/** Akop Karapetyan 2007                                    **/
+/*************************************************************/
 #ifndef _PSP_AUDIO_H
 #define _PSP_AUDIO_H
 
@@ -15,10 +25,10 @@ typedef struct
 
 typedef void (*pspAudioCallback)(void *buf, unsigned int *length, void *userdata);
 
-int pspAudioInit(int sample_count);
+int  pspAudioInit(int sample_count);
 void pspAudioSetVolume(int channel, int left, int right);
-void pspAudioShutdown();
 void pspAudioSetChannelCallback(int channel, pspAudioCallback callback, void *userdata);
+void pspAudioShutdown();
 
 #ifdef __cplusplus
 }
