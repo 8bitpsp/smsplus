@@ -22,22 +22,13 @@ bitmap_t bitmap;
 cart_t cart;                
 input_t input;
 
-/* AKTODO */
-extern int fr;
-
 /* Run the virtual console emulation for one frame */
 void system_frame(int skip_render)
 {
     static int iline_table[] = {0xC0, 0xE0, 0xF0};
     int lpf = (sms.display == DISPLAY_NTSC) ? 262 : 313;
     int iline;
-FILE*foo;
-if(fr<=0)
-{
-  foo=fopen("ms0:/log.txt","a");
-  fprintf(foo,"pre-input check\n");
-  fclose(foo);
-}
+
     /* Debounce pause key */
     if(input.system & INPUT_PAUSE)
     {
@@ -53,12 +44,6 @@ if(fr<=0)
     {
          sms.paused = 0;
     }
-if(fr<=0)
-{
-  foo=fopen("ms0:/log.txt","a");
-  fprintf(foo,"pre-loop\n");
-  fclose(foo);
-}
 
     for(vdp.line = 0; vdp.line < lpf; vdp.line++)
     {
@@ -89,21 +74,9 @@ if(fr<=0)
         {
             vdp.left = vdp.reg[0x0A];
         }
-if(fr<=0)
-{
-  foo=fopen("ms0:/log.txt","a");
-  fprintf(foo,"  in-loop; vdp.line=%i\n", vdp.line);
-  fclose(foo);
-}
 
         if(vdp.line == iline)
         {
-if(fr<=0)
-{
-  foo=fopen("ms0:/log.txt","a");
-  fprintf(foo,"  vdp.line==iline\n");
-  fclose(foo);
-}
             vdp.status |= 0x80;
             vdp.vint_pending = 1;
 
@@ -114,27 +87,9 @@ if(fr<=0)
                 z80_set_irq_line(0, ASSERT_LINE);
             }
         }
-if(fr<=0)
-{
-  foo=fopen("ms0:/log.txt","a");
-  fprintf(foo,"  updating sound\n");
-  fclose(foo);
-}
 
         sound_update(vdp.line);
-if(fr<=0)
-{
-  foo=fopen("ms0:/log.txt","a");
-  fprintf(foo,"  done\n");
-  fclose(foo);
-}
     }
-if(fr<=0)
-{
-  foo=fopen("ms0:/log.txt","a");
-  fprintf(foo,"loop done\n");
-  fclose(foo);
-}
 }
 
 

@@ -1,16 +1,3 @@
-/*
- * PSP Software Development Kit - http://www.pspdev.org
- * -----------------------------------------------------------------------
- * Licensed under the BSD license, see LICENSE in PSPSDK root for details.
- *
- * pspaudiolib.h - Audio library build on top of sceAudio, but to provide
- *                 multiple thread usage and callbacks.
- *
- * Copyright (c) 2005 Adresd
- * Copyright (c) 2005 Marcus R. Brown <mrbrown@ocgnet.org>
- *
- * $Id: pspaudiolib.h 1874 2006-04-18 13:20:58Z tyranid $
- */
 #ifndef _PSP_AUDIO_H
 #define _PSP_AUDIO_H
 
@@ -18,42 +5,24 @@
 extern "C" {
 #endif
 
-typedef struct 
-{
-  short l;
-  short r;
-} PspSample;
-
-#define PSP_NUM_AUDIO_CHANNELS 4
-/** This is the number of frames you can update per callback, a frame being
- * 1 sample for mono, 2 samples for stereo etc. */
-#define PSP_NUM_AUDIO_SAMPLES 512
 #define PSP_VOLUME_MAX 0x8000
 
-typedef void (* pspAudioCallback_t)(void *buf, unsigned int reqn, void *pdata);
+typedef struct 
+{
+  short Left;
+  short Right;
+} PspSample;
 
-typedef struct {
-  int threadhandle;
-  int handle;
-  int volumeleft;
-  int volumeright;
-  pspAudioCallback_t callback;
-  void *pdata;
-} psp_audio_channelinfo;
+typedef void (*pspAudioCallback)(void *buf, unsigned int *length, void *userdata);
 
-typedef int (* pspAudioThreadfunc_t)(int args, void *argp);
-
-int  pspAudioInit();
-void pspAudioEndPre();
-void pspAudioEnd();
-
+int pspAudioInit(int sample_count);
 void pspAudioSetVolume(int channel, int left, int right);
-void pspAudioChannelThreadCallback(int channel, void *buf, unsigned int reqn);
-void pspAudioSetChannelCallback(int channel, pspAudioCallback_t callback, void *pdata);
-int  pspAudioOutBlocking(unsigned int channel, unsigned int vol1, unsigned int vol2, void *buf);
+void pspAudioShutdown();
+void pspAudioSetChannelCallback(int channel, pspAudioCallback callback, void *userdata);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif // _PSP_AUDIO_H
+

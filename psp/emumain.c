@@ -1,5 +1,6 @@
 #include "emumain.h"
 
+#include "audio.h"
 #include "video.h"
 #include "psp.h"
 #include "ctrl.h"
@@ -10,7 +11,7 @@
 #include "system.h"
 
 /* AKTODO */
-int fr=1277;
+int fr=1281;
 
 PspImage *Screen;
 
@@ -41,7 +42,7 @@ void InitEmulator()
   bitmap.viewport.h = 192;
 
   /* Initialize sound structure */
-  snd.fm_which = SND_YM2413;// SND_EMU2413;
+  snd.fm_which = SND_EMU2413;
   snd.fps = FPS_NTSC;
   snd.fm_clock = CLOCK_NTSC;
   snd.psg_clock = CLOCK_NTSC;
@@ -55,8 +56,12 @@ load_rom("sonic.sms");
 
   /* Initialize the virtual console emulation */
   system_init();
+
+  sms.territory = TERRITORY_EXPORT;
+
   system_poweron();
 }
+void AudioCallback(void* buf, unsigned int *length, void *userdata);
 
 void RunEmulator()
 {
@@ -65,7 +70,7 @@ void RunEmulator()
 
   /* Init performance counter */
   pspPerfInitFps(&FpsCounter);
-
+pspAudioSetChannelCallback(0, AudioCallback, 0);
   /* Main emulation loop */
   while (!ExitPSP)
   {
@@ -76,7 +81,7 @@ void RunEmulator()
     system_frame(0);
 
     /* Sound */
-    RenderAudio();
+//    RenderAudio();
 
     /* Display */
     RenderVideo();
@@ -135,8 +140,8 @@ void RenderVideo()
   if (ShowFPS)
   {
     /* AKTODO */
-    static char fps_display[16];
-    sprintf(fps_display, " %3.02f (fr %i) ", pspPerfGetFps(&FpsCounter), fr--);
+    static char fps_display[32];
+    sprintf(fps_display, " %3.02f (fr %i)", pspPerfGetFps(&FpsCounter), fr--);
     
     int width = pspFontGetTextWidth(&PspStockFont, fps_display);
     int height = pspFontGetLineHeight(&PspStockFont);
@@ -154,9 +159,15 @@ void RenderVideo()
   pspVideoSwapBuffers();
 }
 
-void RenderAudio()
+void AudioCallback(void* buf, unsigned int *length, void *userdata)
 {
-  /* Render sound */
-  //      osd_play_streamed_sample_16(0, snd.output[0], snd.buffer_size, option.sndrate, 60, -100);
-  //      osd_play_streamed_sample_16(1, snd.output[1], snd.buffer_size, option.sndrate, 60,  100);
+  PspSample *OutBuf = (PspSample*)buf;
+  int i;
+
+  for(i=0;i<*length;i++) 
+  {
+    OutBuf[i].Left = snd.output[0][i];
+    OutBuf[i].Right = snd.output[1][i];
+  }
 }
+

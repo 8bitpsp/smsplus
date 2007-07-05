@@ -42,7 +42,12 @@ int sound_init(void)
         snd.mixer_callback = sound_mixer_callback;
 
     /* Calculate number of samples generated per frame */
+#ifdef PSP
+    /* PSP version requires a sample count divisible by 64 */
+    snd.sample_count = ((snd.sample_rate / snd.fps) + 63) & ~63;
+#else
     snd.sample_count = (snd.sample_rate / snd.fps);
+#endif
 
     /* Calculate size of sample buffer */
     snd.buffer_size = snd.sample_count * 2;

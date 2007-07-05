@@ -23,7 +23,7 @@ int main(int argc,char *argv[])
 {
   /* Initialize PSP */
   pspInit(argv[0]);
-  pspAudioInit();
+  pspAudioInit(768);
   pspCtrlInit();
   pspVideoInit();
 
@@ -37,7 +37,7 @@ int main(int argc,char *argv[])
   TrashMenu();
 
   /* Release PSP resources */
-  pspAudioEnd();
+  pspAudioShutdown();
   pspVideoShutdown();
   pspShutdown();
 

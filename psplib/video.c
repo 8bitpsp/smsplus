@@ -199,6 +199,55 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
   sceGuScissor(0, 0, SCR_WIDTH, SCR_HEIGHT);
 }
 
+void pspVideoPutImageDirect(const PspImage *image, int dx, int dy, int dw, int dh)
+{
+  sceGuScissor(dx, dy, dx + dw, dy + dh);
+
+  void *pixels = image->Pixels;
+
+  if (dw == image->Width && dh == image->Height)
+  {
+    sceGuCopyImage(PixelFormat, 0, 0, image->Width, image->Height, image->Width,
+      pixels, dx, dy, image->Width, (void *)(VRAM_START + (u32)VramOffset));
+  }
+  else
+  {
+    sceGuEnable(GU_TEXTURE_2D);
+    sceGuTexMode(TexFormat, 0, 0, GU_FALSE);
+    sceGuTexImage(0, BUF_WIDTH, BUF_WIDTH, BUF_WIDTH, pixels);
+    sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
+    sceGuTexFilter(TexFilter, TexFilter);
+
+    struct TexVertex* vertices;
+    int start, end, sc_end, slsz_scaled;
+    slsz_scaled = ceil((float)dw * (float)SLICE_SIZE) / (float)image->Width;
+
+    for (start = 0, end = BUF_WIDTH, sc_end = dx + dw; start < end; start += SLICE_SIZE, dx += slsz_scaled)
+    {
+      vertices = (struct TexVertex*)sceGuGetMemory(2 * sizeof(struct TexVertex));
+
+      vertices[0].u = start; vertices[0].v = 0;
+      vertices[1].u = start + SLICE_SIZE; vertices[1].v = image->Height;
+
+      vertices[0].x = dx; vertices[0].y = dy;
+      vertices[1].x = dx + slsz_scaled; vertices[1].y = dy + dh;
+
+      vertices[0].color
+        = vertices[1].color
+        = vertices[0].z 
+        = vertices[1].z = 0;
+
+      sceGuDrawArray(GU_SPRITES, 
+        GU_TEXTURE_16BIT | TexColor | GU_VERTEX_16BIT | GU_TRANSFORM_2D,
+        2, 0, vertices);
+    }
+
+    sceGuDisable(GU_TEXTURE_2D);
+  }
+
+  sceGuScissor(0, 0, SCR_WIDTH, SCR_HEIGHT);
+}
+
 void pspVideoSwapBuffers()
 {
   VramOffset = sceGuSwapBuffers();
