@@ -25,16 +25,16 @@ inline void RenderAudio();
 void InitEmulator()
 {
   /* Initialize screen buffer */
-  Screen = pspImageCreate(256, 256);
+  Screen = pspImageCreate(512, 272);
   pspImageClear(Screen, 0x8000);
 
   /* Set up bitmap structure */
   memset(&bitmap, 0, sizeof(bitmap_t));
-  bitmap.width  = Screen->Width;
-  bitmap.height = Screen->Height;
+  bitmap.width  = 256; //Screen->Width;
+  bitmap.height = 256; //Screen->Height;
   bitmap.depth  = 16;
   bitmap.granularity = (bitmap.depth >> 3);
-  bitmap.pitch  = bitmap.width * bitmap.granularity;
+  bitmap.pitch  = 512; //bitmap.width * bitmap.granularity;
   bitmap.data   = (uint8 *)Screen->Pixels;
   bitmap.viewport.x = 0;
   bitmap.viewport.y = 0;
@@ -134,7 +134,7 @@ void RenderVideo()
   pspVideoBegin();
 
   /* Draw the screen */
-  pspVideoPutImage(Screen, 0, 0, Screen->Width, Screen->Height);
+  pspVideoPutImageDirect(Screen, 0, 0, Screen->Width, Screen->Height);
 
   /* Show FPS counter */
   if (ShowFPS)
