@@ -214,7 +214,7 @@ void pspVideoPutImageDirect(const PspImage *image, int dx, int dy, int dw, int d
   {
     sceGuEnable(GU_TEXTURE_2D);
     sceGuTexMode(TexFormat, 0, 0, GU_FALSE);
-    sceGuTexImage(0, image->Width, image->Height, image->Width, pixels);
+    sceGuTexImage(0, image->Width, image->Width /*image->Height*/, image->Width, pixels);
     sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
     sceGuTexFilter(TexFilter, TexFilter);
 
@@ -381,7 +381,7 @@ int pspVideoPrintCenter(const PspFont *font, int sx, int sy, int dx, const char 
   int width, c = color, max;
 
   width = pspFontGetTextWidth(font, string);
-  sx = (dx - sx) / 2 - width / 2;
+  sx += (dx - sx) / 2 - width / 2;
 
   for (ch = (unsigned char*)string, width = 0, max = 0; *ch; ch++)
   {

@@ -20,7 +20,7 @@ BUILD_SOUND=$(SOUND)/sound.o $(SOUND)/sn76489.o $(SOUND)/emu2413.o \
 BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
              $(PSPLIB)/video.o $(PSPLIB)/audio.o $(PSPLIB)/fileio.o \
              $(PSPLIB)/menu.o $(PSPLIB)/ui.o $(PSPLIB)/ctrl.o \
-             $(PSPLIB)/kybd.o $(PSPLIB)/perf.o
+             $(PSPLIB)/kybd.o $(PSPLIB)/perf.o $(PSPLIB)/util.o
 BUILD_SMSPLUS=$(SMSPPSP)/system.o $(SMSPPSP)/emumain.o $(SMSPPSP)/menu.o \
               $(SMSPPSP)/main.o
 
@@ -56,8 +56,15 @@ $(PSPLIB)/ui.o:     $(PSPLIB)/ui.c $(PSPLIB)/ui.h \
                     $(PSPLIB)/ctrl.c
 $(PSPLIB)/video.o:  $(PSPLIB)/video.c $(PSPLIB)/video.h \
                     $(PSPLIB)/font.c $(PSPLIB)/image.c
+$(PSPLIB)/util.o:   $(PSPLIB)/util.c $(PSPLIB)/util.h \
+                    $(PSPLIB)/video.c $(PSPLIB)/fileio.c \
+										$(PSPLIB)/image.c
 $(PSPLIB)/stockfont.h: $(DATA)/genfont $(PSPLIB)/stockfont.fd
 	$< < $(word 2,$^) > $@
 $(DATA)/genfont: $(PSPLIB)/genfont.c
 	cc $< -o $@
 
+copy: kxploit
+	cp smsppsp/EBOOT.PBP /media/disk/PSP/GAME/__SCE__smsppsp/eboot.pbp
+	cp smsppsp%/EBOOT.PBP /media/disk/PSP/GAME/%__SCE__smsppsp/eboot.pbp
+	sync

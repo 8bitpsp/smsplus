@@ -79,6 +79,7 @@ extern input_t input;       /* Controller input */
 /* Function prototypes */
 void system_frame(int skip_render);
 void system_init(void);
+void system_reinit(void);
 void system_shutdown(void);
 void system_reset(void);
 void system_manage_sram(uint8 *sram, int slot, int mode);

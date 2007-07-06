@@ -1,5 +1,9 @@
 #include "emumain.h"
 
+#include <psptypes.h>
+#include "time.h"
+#include <psprtc.h>
+
 #include "audio.h"
 #include "video.h"
 #include "psp.h"
@@ -13,16 +17,27 @@
 PspImage *Screen;
 
 static PspFpsCounter FpsCounter;
-extern int ShowFPS;
+static int ClearScreen;
+static int ScreenX, ScreenY, ScreenW, ScreenH;
+static int TicksPerUpdate;
+static u32 TicksPerSecond;
+static u64 LastTick;
+static u64 CurrentTick;
+static int Frame;
 
-inline void ParseInput();
+extern char *GameName;
+extern EmulatorOptions SmsOptions;
+
+inline int ParseInput();
 inline void RenderVideo();
-inline void RenderAudio();
+void AudioCallback(void* buf, unsigned int *length, void *userdata);
 
 void InitEmulator()
 {
+  ClearScreen = 0;
+
   /* Initialize screen buffer */
-  Screen = pspImageCreate(256, 256);
+  Screen = pspImageCreate(256, 192);
   pspImageClear(Screen, 0x8000);
 
   /* Set up bitmap structure */
@@ -46,45 +61,78 @@ void InitEmulator()
   snd.sample_rate = 44100;
   snd.mixer_callback = NULL;
 
-/* AKTODO: */
-FILE*foo=fopen("ms0:/log.txt","w");
-fclose(foo);
-load_rom("sonic.sms");
-
-  /* Initialize the virtual console emulation */
-  system_init();
-
   sms.territory = TERRITORY_EXPORT;
-
-  system_poweron();
 }
-void AudioCallback(void* buf, unsigned int *length, void *userdata);
 
 void RunEmulator()
 {
-  /* Set clock frequency during emulation */
-  pspSetClockFrequency(300);
+  float ratio;
+
+  /* Recompute screen size/position */
+  switch (SmsOptions.DisplayMode)
+  {
+  default:
+  case DISPLAY_MODE_UNSCALED:
+    ScreenW = Screen->Width;
+    ScreenH = Screen->Height;
+    break;
+  case DISPLAY_MODE_FIT_HEIGHT:
+    ratio = (float)SCR_HEIGHT / (float)Screen->Height;
+    ScreenW = (float)Screen->Width * ratio;
+    ScreenH = SCR_HEIGHT;
+    break;
+  case DISPLAY_MODE_FILL_SCREEN:
+    ScreenW = SCR_WIDTH;
+    ScreenH = SCR_HEIGHT;
+    break;
+  }
+  ScreenX = (SCR_WIDTH / 2) - (ScreenW / 2);
+  ScreenY = (SCR_HEIGHT / 2) - (ScreenH / 2);
 
   /* Init performance counter */
   pspPerfInitFps(&FpsCounter);
-pspAudioSetChannelCallback(0, AudioCallback, 0);
+
+  /* Recompute update frequency */
+  TicksPerSecond = sceRtcGetTickResolution();
+  if (SmsOptions.UpdateFreq)
+  {
+    TicksPerUpdate = TicksPerSecond
+      / (SmsOptions.UpdateFreq / (SmsOptions.Frameskip + 1));
+    sceRtcGetCurrentTick(&LastTick);
+  }
+  Frame = 0;
+  ClearScreen = 1;
+
+  /* Resume sound */
+  pspAudioSetChannelCallback(0, AudioCallback, 0);
+
+  /* Wait for V. refresh */
+  pspVideoWaitVSync();
+
   /* Main emulation loop */
   while (!ExitPSP)
   {
     /* Check input */
-    ParseInput();
+    if (ParseInput()) break;
 
     /* Run the system emulation for a frame */
-    system_frame(0);
+    if (++Frame <= SmsOptions.Frameskip)
+    {
+      /* Skip frame */
+      system_frame(1);
+    }
+    else
+    {
+      system_frame(0);
+      Frame = 0;
 
-    /* Sound is rendered via callback */
-
-    /* Display */
-    RenderVideo();
+      /* Display */
+      RenderVideo();
+    }
   }
 
-  /* Set normal clock frequency */
-  pspSetClockFrequency(222);
+  /* Stop sound */
+  pspAudioSetChannelCallback(0, NULL, 0);
 }
 
 void TrashEmulator()
@@ -92,12 +140,15 @@ void TrashEmulator()
   /* Trash screen */
   if (Screen) pspImageDestroy(Screen);
 
-  /* Release emulation resources */
-  system_poweroff();
-  system_shutdown();
+  if (GameName)
+  {
+    /* Release emulation resources */
+    system_poweroff();
+    system_shutdown();
+  }
 }
 
-void ParseInput()
+int ParseInput()
 {
   /* Reset input */
   input.system    = 0;
@@ -111,6 +162,9 @@ void ParseInput()
   /* Check the input */
   if (pspCtrlPollControls(&pad))
   {
+    if((pad.Buttons & PSP_CTRL_LTRIGGER)
+      && (pad.Buttons & PSP_CTRL_RTRIGGER)) return 1;
+
     if(pad.Buttons & PSP_CTRL_ANALUP) input.pad[0] |= INPUT_UP;
     else if(pad.Buttons & PSP_CTRL_ANALDOWN) input.pad[0] |= INPUT_DOWN;
 
@@ -122,6 +176,8 @@ void ParseInput()
 
     if(pad.Buttons & PSP_CTRL_START)  input.system |= (IS_GG) ? INPUT_START : INPUT_PAUSE;
   }
+
+  return 0;
 }
 
 void RenderVideo()
@@ -129,11 +185,18 @@ void RenderVideo()
   /* Update the display */
   pspVideoBegin();
 
+  /* Clear the buffer first, if necessary */
+  if (ClearScreen >= 0)
+  {
+    ClearScreen--;
+    pspVideoClearScreen();
+  }
+
   /* Draw the screen */
-  pspVideoPutImageDirect(Screen, 0, 0, Screen->Width, Screen->Height);
+  pspVideoPutImageDirect(Screen, ScreenX, ScreenY, ScreenW, ScreenH);
 
   /* Show FPS counter */
-  if (ShowFPS)
+  if (SmsOptions.ShowFps)
   {
     /* AKTODO */
     static char fps_display[32];
@@ -148,8 +211,16 @@ void RenderVideo()
 
   pspVideoEnd();
 
+  /* Wait if needed */
+  if (SmsOptions.UpdateFreq)
+  {
+    do { sceRtcGetCurrentTick(&CurrentTick); }
+    while (CurrentTick - LastTick < TicksPerUpdate);
+    LastTick = CurrentTick;
+  }
+
   /* Wait for VSync signal */
-//  pspVideoWaitVSync();
+  if (SmsOptions.VSync) pspVideoWaitVSync();
 
   /* Swap buffers */
   pspVideoSwapBuffers();
@@ -162,8 +233,8 @@ void AudioCallback(void* buf, unsigned int *length, void *userdata)
 
   for(i = 0; i < *length; i++) 
   {
-    OutBuf[i].Left = snd.output[0][i];
-    OutBuf[i].Right = snd.output[1][i];
+    OutBuf[i].Left = snd.output[0][i] * 2;
+    OutBuf[i].Right = snd.output[1][i] * 2;
   }
 }
 

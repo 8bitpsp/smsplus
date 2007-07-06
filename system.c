@@ -95,6 +95,17 @@ void system_frame(int skip_render)
 
 
 
+void system_reinit(void)
+{
+    /* Palette fix */
+    sms_init();
+    pio_init();
+    vdp_init();
+    render_init();
+
+    sms.save = 0;
+}
+
 void system_init(void)
 {
     error_init();
