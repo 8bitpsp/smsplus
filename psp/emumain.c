@@ -10,9 +10,6 @@
 #include "sound.h"
 #include "system.h"
 
-/* AKTODO */
-int fr=1281;
-
 PspImage *Screen;
 
 static PspFpsCounter FpsCounter;
@@ -80,8 +77,7 @@ pspAudioSetChannelCallback(0, AudioCallback, 0);
     /* Run the system emulation for a frame */
     system_frame(0);
 
-    /* Sound */
-//    RenderAudio();
+    /* Sound is rendered via callback */
 
     /* Display */
     RenderVideo();
@@ -134,18 +130,18 @@ void RenderVideo()
   pspVideoBegin();
 
   /* Draw the screen */
-  pspVideoPutImageDirect(Screen, 0, 0, Screen->Width + 10, Screen->Height + 10);
+  pspVideoPutImageDirect(Screen, 0, 0, Screen->Width, Screen->Height);
 
   /* Show FPS counter */
   if (ShowFPS)
   {
     /* AKTODO */
     static char fps_display[32];
-    sprintf(fps_display, " %3.02f (fr %i)", pspPerfGetFps(&FpsCounter), fr--);
-    
+    sprintf(fps_display, " %3.02f", pspPerfGetFps(&FpsCounter));
+
     int width = pspFontGetTextWidth(&PspStockFont, fps_display);
     int height = pspFontGetLineHeight(&PspStockFont);
-    
+
     pspVideoFillRect(SCR_WIDTH - width, 0, SCR_WIDTH, height, PSP_VIDEO_BLACK);
     pspVideoPrint(&PspStockFont, SCR_WIDTH - width, 0, fps_display, PSP_VIDEO_WHITE);
   }

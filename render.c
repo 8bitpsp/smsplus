@@ -323,8 +323,7 @@ void render_bg_sms(int line)
     int shift = (hscroll & 7);
     uint32 atex_mask;
     uint32 *cache_ptr;
-    uint32 *linebuf_ptr = (uint32 *)&linebuf[(0 - shift) < 0 ? 0 : (0-shift)];
-//    uint32 *linebuf_ptr = (uint32 *)&linebuf[0 - shift]; /* AK: original code */
+    uint32 *linebuf_ptr = (uint32 *)&linebuf[0 - shift];
 
     /* Draw first column (clipped) */
     if(shift)
@@ -360,7 +359,7 @@ void render_bg_sms(int line)
         /* Point to a line of pattern data in cache */
         cache_ptr = (uint32 *)&bg_pattern_cache[((attr & 0x7FF) << 6) | (v_row)];
         
-        /* Copy the left half, adding the attribute bits in */ /*AK: This is where it fails */
+        /* Copy the left half, adding the attribute bits in */
         write_dword( &linebuf_ptr[(column << 1)] , read_dword( &cache_ptr[0] ) | (atex_mask));
 
         /* Copy the right half, adding the attribute bits in */
