@@ -48,13 +48,39 @@ PspImage* pspImageCreate(int width, int height)
   image->Viewport.Y = 0;
   image->Viewport.Width = width;
   image->Viewport.Height = height;
+  image->FreeBuffer = 1;
+
+  return image;
+}
+
+PspImage* pspImageCreateVram(int width, int height)
+{
+  int size = width * height * sizeof(unsigned short);
+  unsigned short* pixels = pspVideoAllocateVramChunk(size);
+
+  if (!pixels) return NULL;
+
+  PspImage *image = (PspImage*)malloc(sizeof(PspImage));
+  if (!image) return NULL;
+
+  memset(pixels, 0, size);
+
+  image->Width = width;
+  image->Height = height;
+  image->Pixels = pixels;
+
+  image->Viewport.X = 0;
+  image->Viewport.Y = 0;
+  image->Viewport.Width = width;
+  image->Viewport.Height = height;
+  image->FreeBuffer = 0;
 
   return image;
 }
 
 void pspImageDestroy(PspImage *image)
 {
-  free(image->Pixels);
+  if (image->FreeBuffer) free(image->Pixels);
   free(image);
 }
 

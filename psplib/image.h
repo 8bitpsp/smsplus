@@ -33,9 +33,11 @@ typedef struct
   int Height;
   unsigned short* Pixels;
   PspViewport Viewport;
+  int FreeBuffer;
 } PspImage;
 
 PspImage* pspImageCreate(int width, int height);
+PspImage* pspImageCreateVram(int width, int height);
 void      pspImageDestroy(PspImage *image);
 PspImage* pspImageCreateThumbnail(const PspImage *image);
 PspImage* pspImageCreateCopy(const PspImage *image);

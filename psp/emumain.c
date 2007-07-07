@@ -42,7 +42,8 @@ void InitEmulator()
   ClearScreen = 0;
 
   /* Initialize screen buffer */
-  Screen = pspImageCreate(256, 192);
+  Screen = pspImageCreateVram(256, 192);
+
   pspImageClear(Screen, 0x8000);
 
   /* Set up bitmap structure */

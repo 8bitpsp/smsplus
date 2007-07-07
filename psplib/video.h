@@ -96,6 +96,8 @@ PspImage* pspVideoGetVramBufferCopy();
 
 void pspVideoCallList(const void *list);
 
+void* pspVideoAllocateVramChunk(unsigned int bytes);
+
 #ifdef __cplusplus
 }
 #endif

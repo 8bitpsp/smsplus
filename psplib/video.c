@@ -51,6 +51,7 @@ static int   PixelFormat;
 static int   TexFormat;
 static int   TexColor;
 static void *VramOffset;
+static void *VramChunkOffset;
 static unsigned short __attribute__((aligned(16))) ScratchBuffer[BUF_WIDTH * SCR_HEIGHT];
 static unsigned int VramBufferOffset;
 static unsigned int __attribute__((aligned(16))) List[262144]; /* TODO: ? */
@@ -66,6 +67,7 @@ void pspVideoInit()
   TexFilter = GU_LINEAR;
   VramBufferOffset = 0;
   VramOffset = 0;
+  VramChunkOffset = (void*)0x44088000;
 
   int size;
 
@@ -478,4 +480,12 @@ PspImage* pspVideoGetVramBufferCopy()
       image->Pixels[i * image->Width + j] = *(vram_addr + (i * BUF_WIDTH + j));
 
   return image;
+}
+
+void* pspVideoAllocateVramChunk(unsigned int bytes)
+{
+  void *ptr = VramChunkOffset;
+  VramChunkOffset += bytes;
+
+  return ptr;
 }
