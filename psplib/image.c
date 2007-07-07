@@ -44,6 +44,11 @@ PspImage* pspImageCreate(int width, int height)
   image->Height = height;
   image->Pixels = pixels;
 
+  image->Viewport.X = 0;
+  image->Viewport.Y = 0;
+  image->Viewport.Width = width;
+  image->Viewport.Height = height;
+
   return image;
 }
 

@@ -19,14 +19,21 @@ extern "C" {
 
 #include <stdio.h>
 
-struct PspImage
+typedef struct
+{
+  int X;
+  int Y;
+  int Width;
+  int Height;
+} PspViewport;
+
+typedef struct
 {
   int Width;
   int Height;
   unsigned short* Pixels;
-};
-
-typedef struct PspImage PspImage;
+  PspViewport Viewport;
+} PspImage;
 
 PspImage* pspImageCreate(int width, int height);
 void      pspImageDestroy(PspImage *image);
