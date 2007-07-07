@@ -27,8 +27,9 @@
 #define TAB_STATE     1
 #define TAB_CONTROL   2
 #define TAB_OPTION    3
-#define TAB_ABOUT     4
-#define TAB_MAX       TAB_OPTION
+#define TAB_SYSTEM    4
+#define TAB_ABOUT     5
+#define TAB_MAX       TAB_SYSTEM
 
 #define OPTION_DISPLAY_MODE 1
 #define OPTION_SYNC_FREQ    2
@@ -37,6 +38,9 @@
 #define OPTION_CLOCK_FREQ   5
 #define OPTION_SHOW_FPS     6
 #define OPTION_CONTROL_MODE 7
+
+#define SYSTEM_SCRNSHOT    1
+#define SYSTEM_RESET       2
 
 extern PspImage *Screen;
 
@@ -71,6 +75,7 @@ static const char *TabLabel[] =
   "Save/Load",
   "Controls",
   "Options",
+  "System",
   "About"
 };
 
@@ -107,6 +112,8 @@ int  OnSaveStateButtonPress(const PspUiGallery *gallery, PspMenuItem* item,
        u32 button_mask);
 
 int OnQuickloadOk(const void *browser, const void *path);
+
+void OnSystemRender(const void *uiobject, const void *item_obj);
 
 /* Define various menu options */
 static const PspMenuOptionDef
@@ -154,8 +161,8 @@ static const PspMenuOptionDef
     { "Joystick Button I",  (void*)(JOY|INPUT_BUTTON1) },
     { "Joystick Button II", (void*)(JOY|INPUT_BUTTON2) },
     /* Joystick */
-    { "Start (GG) / Pause (MS)", (void*)(SYS|INPUT_START|INPUT_PAUSE) },
-    { "Soft Reset (MS)",    (void*)(SYS|INPUT_RESET) },
+    { "Start (GG) / Pause (SMS)", (void*)(SYS|INPUT_START|INPUT_PAUSE) },
+    { "Soft Reset (SMS)",    (void*)(SYS|INPUT_RESET) },
     /* End */
     { NULL, NULL } };
 
@@ -221,6 +228,14 @@ static const PspMenuItemDef
                            (void*)MAP_BUTTON_STARTSELECT,
       ButtonMapOptions, -1, ControlHelpText },
     { NULL, NULL }
+  },
+  SystemMenuDef[] = {
+    { "\tSystem", NULL, NULL, -1, NULL },
+    { "Reset",            (void*)SYSTEM_RESET,
+      NULL,             -1, "\026\001\020 Reset" },
+    { "Save screenshot",  (void*)SYSTEM_SCRNSHOT,
+      NULL,             -1, "\026\001\020 Save screenshot" },
+    { NULL, NULL }
   };
 
 PspUiSplash SplashScreen =
@@ -269,6 +284,16 @@ PspUiFileBrowser QuickloadBrowser =
   OnGenericButtonPress,
   QuickloadFilter,
   0
+};
+
+PspUiMenu SystemUiMenu =
+{
+  NULL,                  /* PspMenu */
+  OnSystemRender,        /* OnRender() */
+  OnMenuOk,              /* OnOk() */
+  OnGenericCancel,       /* OnCancel() */
+  OnMenuButtonPress,     /* OnButtonPress() */
+  OnMenuItemChanged,     /* OnItemChanged() */
 };
 
 /* Game configuration (includes button maps) */
@@ -367,6 +392,10 @@ void InitMenu()
   ControlUiMenu.Menu = pspMenuCreate();
   pspMenuLoad(ControlUiMenu.Menu, ControlMenuDef);
 
+  /* Initialize system menu */
+  SystemUiMenu.Menu = pspMenuCreate();
+  pspMenuLoad(SystemUiMenu.Menu, SystemMenuDef);
+
   /* Initialize paths */
   SaveStatePath 
     = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(SaveStateDir) + 2));
@@ -444,6 +473,9 @@ void DisplayMenu()
       break;
     case TAB_QUICKLOAD:
       pspUiOpenBrowser(&QuickloadBrowser, (GameName) ? GameName : GamePath);
+      break;
+    case TAB_SYSTEM:
+      pspUiOpenMenu(&SystemUiMenu, NULL);
       break;
     case TAB_OPTION:
       /* Init menu options */
@@ -570,7 +602,8 @@ void OnGenericRender(const void *uiobject, const void *item_obj)
   {
     width = -10;
 
-    if (i == TAB_STATE && !GameName) continue;
+    if (!GameName && (i == TAB_STATE || i == TAB_SYSTEM))
+      continue;
 
     /* Determine width of text */
     width = pspFontGetTextWidth(UiMetric.Font, TabLabel[i]);
@@ -587,16 +620,28 @@ void OnGenericRender(const void *uiobject, const void *item_obj)
 int OnGenericButtonPress(const PspUiFileBrowser *browser, 
   const char *path, u32 button_mask)
 {
+  int tab_index;
+
   /* If L or R are pressed, switch tabs */
   if (button_mask & PSP_CTRL_LTRIGGER)
   {
-    if (--TabIndex == TAB_STATE && !GameName) TabIndex--;
-    if (TabIndex < 0) TabIndex=TAB_MAX;
+    TabIndex--;
+    do
+    {
+      tab_index = TabIndex;
+      if (!GameName && (TabIndex == TAB_STATE || TabIndex == TAB_SYSTEM)) TabIndex--;
+      if (TabIndex < 0) TabIndex = TAB_MAX;
+    } while (tab_index != TabIndex);
   }
   else if (button_mask & PSP_CTRL_RTRIGGER)
   {
-    if (++TabIndex == TAB_STATE && !GameName) TabIndex++;
-    if (TabIndex > TAB_MAX) TabIndex=0;
+    TabIndex++;
+    do
+    {
+      tab_index = TabIndex;
+      if (!GameName && (TabIndex == TAB_STATE || TabIndex == TAB_SYSTEM)) TabIndex++;
+      if (TabIndex > TAB_MAX) TabIndex = 0;
+    } while (tab_index != TabIndex);
   }
   else if ((button_mask & (PSP_CTRL_START | PSP_CTRL_SELECT)) 
     == (PSP_CTRL_START | PSP_CTRL_SELECT))
@@ -663,6 +708,31 @@ int OnMenuOk(const void *uimenu, const void* sel_item)
       pspUiAlert("Changes saved");
     else
       pspUiAlert("ERROR: Changes not saved");
+  }
+  else if (uimenu == &SystemUiMenu)
+  {
+    switch ((int)((const PspMenuItem*)sel_item)->Userdata)
+    {
+    case SYSTEM_RESET:
+
+      /* Reset system */
+      if (pspUiConfirm("Reset the system?"))
+      {
+        ResumeEmulation = 1;
+        system_reset();
+        return 1;
+      }
+      break;
+
+    case SYSTEM_SCRNSHOT:
+
+      /* Save screenshot */
+      if (!pspUtilSavePngSeq(ScreenshotPath, GameName, Screen))
+        pspUiAlert("ERROR: Screenshot not saved");
+      else
+        pspUiAlert("Screenshot saved successfully");
+      break;
+    }
   }
 
   return 0;
@@ -840,6 +910,23 @@ int OnSaveStateButtonPress(const PspUiGallery *gallery,
   }
 
   return OnGenericButtonPress(NULL, NULL, button_mask);
+}
+
+/* Handles any special drawing for the system menu */
+void OnSystemRender(const void *uiobject, const void *item_obj)
+{
+  int w, h, x, y;
+  w = WIDTH / 2;
+  h = HEIGHT / 2;
+  x = SCR_WIDTH - w - 8;
+  y = SCR_HEIGHT - h - 80;
+
+  /* Draw a small representation of the screen */
+  pspVideoShadowRect(x, y, x + w - 1, y + h - 1, PSP_VIDEO_BLACK, 3);
+  pspVideoPutImage(Screen, x, y, w, h);
+  pspVideoDrawRect(x, y, x + w - 1, y + h - 1, PSP_VIDEO_GRAY);
+
+  OnGenericRender(uiobject, item_obj);
 }
 
 static void DisplayStateTab()
@@ -1088,9 +1175,7 @@ void TrashMenu()
   pspMenuDestroy(OptionUiMenu.Menu);
   pspMenuDestroy(ControlUiMenu.Menu);
   pspMenuDestroy(SaveStateGallery.Menu);
-/*
   pspMenuDestroy(SystemUiMenu.Menu);
-*/
 
   /* Trash images */
   if (Background) pspImageDestroy(Background);

@@ -186,7 +186,7 @@ void pspUiFlashMessage(const char *message)
   mh = pspFontGetTextHeight(UiMetric.Font, message);
 
   w = mw + 50;
-  h = mh + fh;
+  h = mh + fh * 2;
   sx = SCR_WIDTH / 2 - w / 2;
   sy = SCR_HEIGHT / 2 - h / 2;
   dx = sx + w;
@@ -198,7 +198,7 @@ void pspUiFlashMessage(const char *message)
   pspVideoFillRect(sx, sy, dx, dy, UiMetric.DialogBgColor);
   pspVideoDrawRect(sx + 1, sy + 1, dx - 1, dy - 1, UiMetric.DialogBorderColor);
   pspVideoPrintCenter(UiMetric.Font,
-    sx, sy + fh / 2, dx, message, UiMetric.TextColor);
+    sx, sy + fh, dx, message, UiMetric.TextColor);
 
   pspVideoEnd();
 
