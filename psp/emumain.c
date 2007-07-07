@@ -9,6 +9,7 @@
 #include "psp.h"
 #include "ctrl.h"
 #include "perf.h"
+#include "util.h"
 
 #include "shared.h"
 #include "sound.h"
@@ -27,6 +28,10 @@ static int Frame;
 
 extern char *GameName;
 extern EmulatorOptions SmsOptions;
+extern const u64 ButtonMask[];
+extern const int ButtonMapId[];
+extern struct ButtonConfig ActiveConfig;
+extern char *ScreenshotPath;
 
 inline int ParseInput();
 inline void RenderVideo();
@@ -162,19 +167,45 @@ int ParseInput()
   /* Check the input */
   if (pspCtrlPollControls(&pad))
   {
-    if((pad.Buttons & PSP_CTRL_LTRIGGER)
-      && (pad.Buttons & PSP_CTRL_RTRIGGER)) return 1;
+    //* DEBUGGING
+    if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
+      == (PSP_CTRL_SELECT | PSP_CTRL_START))
+        pspUtilSaveVramSeq(ScreenshotPath, "game");
+    //*/
 
-    if(pad.Buttons & PSP_CTRL_ANALUP) input.pad[0] |= INPUT_UP;
-    else if(pad.Buttons & PSP_CTRL_ANALDOWN) input.pad[0] |= INPUT_DOWN;
+    /* Parse input */
+    int i, on, code;
+    for (i = 0; ButtonMapId[i] >= 0; i++)
+    {
+      code = ActiveConfig.ButtonMap[ButtonMapId[i]];
+      on = (pad.Buttons & ButtonMask[i]) == ButtonMask[i];
 
-    if(pad.Buttons & PSP_CTRL_ANALLEFT) input.pad[0] |= INPUT_LEFT;
-    else if(pad.Buttons & PSP_CTRL_ANALRIGHT) input.pad[0] |= INPUT_RIGHT;
+      /* Check to see if a button set is pressed. If so, unset it, so it */
+      /* doesn't trigger any other combination presses. */
+      if (on) pad.Buttons &= ~ButtonMask[i];
 
-    if(pad.Buttons & PSP_CTRL_CROSS)  input.pad[0] |= INPUT_BUTTON2;
-    if(pad.Buttons & PSP_CTRL_SQUARE)  input.pad[0] |= INPUT_BUTTON1;
-
-    if(pad.Buttons & PSP_CTRL_START)  input.system |= (IS_GG) ? INPUT_START : INPUT_PAUSE;
+      if (code & JOY)
+      {
+        if (on) input.pad[0] |= CODE_MASK(code);
+      }
+      else if (code & SYS)
+      {
+        if (on)
+        {
+          if (CODE_MASK(code) == (INPUT_START | INPUT_PAUSE))
+            input.system |= (IS_GG) ? INPUT_START : INPUT_PAUSE;
+        }
+      }
+      else if (code & SPC)
+      {
+        switch (CODE_MASK(code))
+        {
+        case SPC_MENU:
+          if (on) return 1;
+          break;
+        }
+      }
+    }
   }
 
   return 0;
@@ -237,4 +268,3 @@ void AudioCallback(void* buf, unsigned int *length, void *userdata)
     OutBuf[i].Right = snd.output[1][i] * 2;
   }
 }
-

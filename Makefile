@@ -21,8 +21,7 @@ BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
              $(PSPLIB)/video.o $(PSPLIB)/audio.o $(PSPLIB)/fileio.o \
              $(PSPLIB)/menu.o $(PSPLIB)/ui.o $(PSPLIB)/ctrl.o \
              $(PSPLIB)/kybd.o $(PSPLIB)/perf.o $(PSPLIB)/util.o
-BUILD_SMSPLUS=$(SMSPPSP)/system.o $(SMSPPSP)/emumain.o $(SMSPPSP)/menu.o \
-              $(SMSPPSP)/main.o
+BUILD_SMSPLUS=$(SMSPPSP)/emumain.o $(SMSPPSP)/menu.o $(SMSPPSP)/main.o
 
 OBJS=$(BUILD_PSPLIB) $(BUILD_SOUND) $(BUILD_Z80) $(BUILD_MINIZIP) \
      $(BUILD_SMS) $(BUILD_SMSPLUS)
