@@ -89,11 +89,14 @@ PspImage* pspImageCreateThumbnail(const PspImage *image)
   PspImage *thumb;
   int i, j, p;
 
-  if (!(thumb = pspImageCreate(image->Width / 2, image->Height / 2)))
+  if (!(thumb = pspImageCreate(image->Viewport.Width / 2, image->Viewport.Height / 2)))
     return NULL;
 
-  for (i = 0, p = 0; i < image->Height; i += 2)
-    for (j = 0; j < image->Width; j += 2)
+  int dy = image->Viewport.Y + image->Viewport.Height;
+  int dx = image->Viewport.X + image->Viewport.Width;
+
+  for (i = image->Viewport.Y, p = 0; i < dy; i += 2)
+    for (j = image->Viewport.X; j < dx; j += 2)
       thumb->Pixels[p++] = image->Pixels[(image->Width * i) + j];
 
   return thumb;  
@@ -110,6 +113,7 @@ PspImage* pspImageCreateCopy(const PspImage *image)
   /* Copy pixels */
   int size = image->Width * image->Height * sizeof(unsigned short);
   memcpy(copy->Pixels, image->Pixels, size);
+  memcpy(&copy->Viewport, &image->Viewport, sizeof(PspViewport));
 
   return copy;
 }
@@ -307,52 +311,55 @@ int pspImageSavePngOpen(FILE *fp, const PspImage* image)
   const unsigned short *pixel;
   int i, j;
 
-  if (!(bitmap = (unsigned char*)malloc(sizeof(unsigned char) * image->Width * image->Height * 3)))
+  int size = sizeof(u8) * image->Viewport.Width * image->Viewport.Height * 3;
+  if (!(bitmap = (u8*)malloc(size)))
     return 0;
 
-  for (i = 0, pixel = image->Pixels; i < image->Height; i++)
+  pixel = image->Pixels + (image->Viewport.Y * image->Width);
+  for (i = 0; i < image->Viewport.Height; i++)
   {
-    for (j = 0; j < image->Width; j++, pixel++)
+    pixel += image->Viewport.X;
+    for (j = 0; j < image->Viewport.Width; j++, pixel++)
     {
-      bitmap[i * image->Width * 3 + j * 3 + 0] = RED(*pixel);
-      bitmap[i * image->Width * 3 + j * 3 + 1] = GREEN(*pixel);
-      bitmap[i * image->Width * 3 + j * 3 + 2] = BLUE(*pixel);
+      bitmap[i * image->Viewport.Width * 3 + j * 3 + 0] = RED(*pixel);
+      bitmap[i * image->Viewport.Width * 3 + j * 3 + 1] = GREEN(*pixel);
+      bitmap[i * image->Viewport.Width * 3 + j * 3 + 2] = BLUE(*pixel);
     }
   }
 
   png_struct *pPngStruct = png_create_write_struct( PNG_LIBPNG_VER_STRING,
     NULL, NULL, NULL );
 
-	if (!pPngStruct)
-	{
-	  free(bitmap);
-		return 0;
+  if (!pPngStruct)
+  {
+    free(bitmap);
+    return 0;
   }
 
   png_info *pPngInfo = png_create_info_struct( pPngStruct );
-	if (!pPngInfo)
-	{
-		png_destroy_write_struct( &pPngStruct, NULL );
-	  free(bitmap);
-		return 0;
-	}
+  if (!pPngInfo)
+  {
+    png_destroy_write_struct( &pPngStruct, NULL );
+    free(bitmap);
+    return 0;
+  }
 
-	png_byte **buf = (png_byte**)malloc(image->Height * sizeof(png_byte*));
-	if (!buf)
-	{
+  png_byte **buf = (png_byte**)malloc(image->Height * sizeof(png_byte*));
+  if (!buf)
+  {
     png_destroy_write_struct( &pPngStruct, &pPngInfo );
-	  free(bitmap);
-		return 0;
-	}
+    free(bitmap);
+    return 0;
+  }
 
-	unsigned int y;
-	for (y = 0; y < image->Height; y++)
-		buf[y] = (byte*)&bitmap[y * image->Width * 3];
+  unsigned int y;
+  for (y = 0; y < image->Height; y++)
+    buf[y] = (byte*)&bitmap[y * image->Width * 3];
 
   if (setjmp( pPngStruct->jmpbuf ))
   {
     free(buf);
-	  free(bitmap);
+    free(bitmap);
     png_destroy_write_struct( &pPngStruct, &pPngInfo );
     return 0;
   }
@@ -368,7 +375,7 @@ int pspImageSavePngOpen(FILE *fp, const PspImage* image)
   png_write_end( pPngStruct, pPngInfo );
 
   png_destroy_write_struct( &pPngStruct, &pPngInfo );
-	free(buf);
+  free(buf);
   free(bitmap);
 
   return 1;

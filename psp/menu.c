@@ -129,7 +129,6 @@ static const PspMenuOptionDef
   FrameLimitOptions[] = {
     { "Disabled", (void*)0 },
     { "60 fps (NTSC)", (void*)60 },
-    { "50 fps (PAL)", (void*)50 },
     { NULL, NULL } },
   FrameSkipOptions[] = {
     { "No skipping", (void*)0 },
@@ -189,42 +188,42 @@ static const PspMenuItemDef
     { NULL, NULL }
   },
   ControlMenuDef[] = {
-    { PSP_FONT_ANALUP,     (void*)MAP_ANALOG_UP,
+    { "\026"PSP_FONT_ANALUP,     (void*)MAP_ANALOG_UP,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_ANALDOWN,   (void*)MAP_ANALOG_DOWN,
+    { "\026"PSP_FONT_ANALDOWN,   (void*)MAP_ANALOG_DOWN,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_ANALLEFT,   (void*)MAP_ANALOG_LEFT,
+    { "\026"PSP_FONT_ANALLEFT,   (void*)MAP_ANALOG_LEFT,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_ANALRIGHT,  (void*)MAP_ANALOG_RIGHT,
+    { "\026"PSP_FONT_ANALRIGHT,  (void*)MAP_ANALOG_RIGHT,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_UP,         (void*)MAP_BUTTON_UP,
+    { "\026"PSP_FONT_UP,         (void*)MAP_BUTTON_UP,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_DOWN,       (void*)MAP_BUTTON_DOWN,
+    { "\026"PSP_FONT_DOWN,       (void*)MAP_BUTTON_DOWN,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_LEFT,       (void*)MAP_BUTTON_LEFT,
+    { "\026"PSP_FONT_LEFT,       (void*)MAP_BUTTON_LEFT,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_RIGHT,      (void*)MAP_BUTTON_RIGHT,
+    { "\026"PSP_FONT_RIGHT,      (void*)MAP_BUTTON_RIGHT,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_SQUARE,     (void*)MAP_BUTTON_SQUARE,
+    { "\026"PSP_FONT_SQUARE,     (void*)MAP_BUTTON_SQUARE,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_CROSS,      (void*)MAP_BUTTON_CROSS,
+    { "\026"PSP_FONT_CROSS,      (void*)MAP_BUTTON_CROSS,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_CIRCLE,     (void*)MAP_BUTTON_CIRCLE,
+    { "\026"PSP_FONT_CIRCLE,     (void*)MAP_BUTTON_CIRCLE,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_TRIANGLE,   (void*)MAP_BUTTON_TRIANGLE,
+    { "\026"PSP_FONT_TRIANGLE,   (void*)MAP_BUTTON_TRIANGLE,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_LTRIGGER,   (void*)MAP_BUTTON_LTRIGGER,
+    { "\026"PSP_FONT_LTRIGGER,   (void*)MAP_BUTTON_LTRIGGER,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_RTRIGGER,   (void*)MAP_BUTTON_RTRIGGER,
+    { "\026"PSP_FONT_RTRIGGER,   (void*)MAP_BUTTON_RTRIGGER,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_SELECT,     (void*)MAP_BUTTON_SELECT,
+    { "\026"PSP_FONT_SELECT,     (void*)MAP_BUTTON_SELECT,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_START,      (void*)MAP_BUTTON_START,
+    { "\026"PSP_FONT_START,      (void*)MAP_BUTTON_START,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_LTRIGGER"+"PSP_FONT_RTRIGGER,
+    { "\026"PSP_FONT_LTRIGGER"+"PSP_FONT_RTRIGGER,
                            (void*)MAP_BUTTON_LRTRIGGERS,
       ButtonMapOptions, -1, ControlHelpText },
-    { PSP_FONT_START"+"PSP_FONT_SELECT,
+    { "\026"PSP_FONT_START"+"PSP_FONT_SELECT,
                            (void*)MAP_BUTTON_STARTSELECT,
       ButtonMapOptions, -1, ControlHelpText },
     { NULL, NULL }
@@ -311,10 +310,10 @@ struct ButtonConfig DefaultConfig =
     JOY|INPUT_DOWN,   /* D-pad Down   */
     JOY|INPUT_LEFT,   /* D-pad Left   */
     JOY|INPUT_RIGHT,  /* D-pad Right  */
-    JOY|INPUT_BUTTON1,/* Square       */
+    JOY|INPUT_BUTTON2,/* Square       */
     JOY|INPUT_BUTTON1,/* Cross        */
-    JOY|INPUT_BUTTON2,/* Circle       */
-    JOY|INPUT_BUTTON2,/* Triangle     */
+    0,                /* Circle       */
+    0,                /* Triangle     */
     0,                /* L Trigger    */
     0,                /* R Trigger    */
     0,                /* Select       */
@@ -372,7 +371,7 @@ void InitMenu()
 
   /* Init NoSaveState icon image */
   NoSaveIcon=pspImageCreate(136, 114);
-  pspImageClear(NoSaveIcon, RGB(66,66,66));
+  pspImageClear(NoSaveIcon, RGB(0x0c,0,0x3f));
 
   /* Initialize state menu */
   SaveStateGallery.Menu = pspMenuCreate();
@@ -416,7 +415,7 @@ void InitMenu()
   UiMetric.Left = 8;
   UiMetric.Top = 24;
   UiMetric.Right = 472;
-  UiMetric.Bottom = 240;
+  UiMetric.Bottom = 250;
   UiMetric.OkButton = (!SmsOptions.ControlMode) ? PSP_CTRL_CROSS : PSP_CTRL_CIRCLE;
   UiMetric.CancelButton = (!SmsOptions.ControlMode) ? PSP_CTRL_CIRCLE : PSP_CTRL_CROSS;
   UiMetric.ScrollbarColor = PSP_VIDEO_GRAY;
@@ -425,8 +424,8 @@ void InitMenu()
   UiMetric.DialogBorderColor = PSP_VIDEO_GRAY;
   UiMetric.DialogBgColor = PSP_VIDEO_DARKGRAY;
   UiMetric.TextColor = PSP_VIDEO_GRAY;
-  UiMetric.SelectedColor = PSP_VIDEO_GREEN;
-  UiMetric.SelectedBgColor = COLOR(0,0,0,0x55);
+  UiMetric.SelectedColor = PSP_VIDEO_YELLOW;
+  UiMetric.SelectedBgColor = COLOR(0xff,0xff,0xff,0x44);
   UiMetric.StatusBarColor = PSP_VIDEO_WHITE;
   UiMetric.BrowserFileColor = PSP_VIDEO_GRAY;
   UiMetric.BrowserDirectoryColor = PSP_VIDEO_YELLOW;
@@ -610,7 +609,7 @@ void OnGenericRender(const void *uiobject, const void *item_obj)
 
     /* Draw background of active tab */
     if (i == TabIndex)
-      pspVideoFillRect(x - 5, 0, x + width + 5, height + 1, 0xff959595);
+      pspVideoFillRect(x - 5, 0, x + width + 5, height + 1, COLOR(0x17,0x00,0x79,0xff));
 
     /* Draw name of tab */
     pspVideoPrint(UiMetric.Font, x, 0, TabLabel[i], PSP_VIDEO_WHITE);
@@ -1164,7 +1163,9 @@ PspImage* SaveState(const char *path, PspImage *icon)
     return NULL;
 
   /* Create thumbnail */
-  PspImage *thumb = pspImageCreateThumbnail(icon);
+  PspImage *thumb;
+  thumb = (icon->Viewport.Width < 200)
+    ? pspImageCreateCopy(icon) : pspImageCreateThumbnail(icon);
   if (!thumb) { fclose(f); return NULL; }
 
   /* Write the thumbnail */

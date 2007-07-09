@@ -736,7 +736,7 @@ void pspUiOpenGallery(const PspUiGallery *gallery, const char *title)
           glow += glow_dir;
           if (glow >= 5 || glow <= 2) glow_dir *= -1;
           pspVideoGlowRect(j - 4, i - 4, 
-            j + icon_w + 4, i + icon_h + 4, UiMetric.SelectedBgColor, glow);
+            j + icon_w + 4, i + icon_h + 4, UiMetric.SelectedColor, glow);
         }
         else 
         {
@@ -966,7 +966,7 @@ void pspUiOpenMenu(const PspUiMenu *uimenu, const char *title)
             PspMenuOption *option;
 
             /* Find the longest option caption */
-            for (option = sel->Options; option->Next; option = option->Next)
+            for (option = sel->Options; option; option = option->Next)
               if (option->Text && (width = pspFontGetTextWidth(UiMetric.Font, option->Text)) > max_option_w) 
                 max_option_w = width;
 

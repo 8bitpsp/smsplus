@@ -9,6 +9,9 @@
 /**     commercially. Please, notify me, if you make any    **/
 /**     changes to this file.                               **/
 /*************************************************************/
+
+/* TODO: move ScratchBuffer into VRAM */
+
 #include <pspgu.h>
 #include <pspkernel.h>
 #include <pspdisplay.h>
@@ -158,10 +161,13 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
 
   void *pixels = _pspVideoGetBuffer(image);
 
-  if (dw == image->Width && dh == image->Height)
+  if (dw == image->Viewport.Width && dh == image->Viewport.Height)
   {
-    sceGuCopyImage(PixelFormat, 0, 0, BUF_WIDTH, SCR_HEIGHT, BUF_WIDTH,
-      pixels, dx, dy, BUF_WIDTH, (void *)(VRAM_START + (u32)VramOffset));
+    sceGuCopyImage(PixelFormat,
+      image->Viewport.X, image->Viewport.Y,
+      image->Viewport.Width, image->Viewport.Height,
+      BUF_WIDTH, pixels, dx, dy,
+      BUF_WIDTH, (void *)(VRAM_START + (u32)VramOffset));
   }
   else
   {
@@ -173,14 +179,16 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
 
     struct TexVertex* vertices;
     int start, end, sc_end, slsz_scaled;
-    slsz_scaled = ceil((float)dw * (float)SLICE_SIZE) / (float)image->Width;
+    slsz_scaled = ceil((float)dw * (float)SLICE_SIZE) / (float)image->Viewport.Width;
 
-    for (start = 0, end = BUF_WIDTH, sc_end = dx + dw; start < end; start += SLICE_SIZE, dx += slsz_scaled)
+    for (start = image->Viewport.X, end = image->Viewport.X + image->Viewport.Width, sc_end = dx + dw; start < end; start += SLICE_SIZE, dx += slsz_scaled)
     {
       vertices = (struct TexVertex*)sceGuGetMemory(2 * sizeof(struct TexVertex));
 
-      vertices[0].u = start; vertices[0].v = 0;
-      vertices[1].u = start + SLICE_SIZE; vertices[1].v = image->Height;
+      vertices[0].u = start;
+      vertices[0].v = image->Viewport.Y;
+      vertices[1].u = start + SLICE_SIZE;
+      vertices[1].v = image->Viewport.Height + image->Viewport.Y;
 
       vertices[0].x = dx; vertices[0].y = dy;
       vertices[1].x = dx + slsz_scaled; vertices[1].y = dy + dh;
