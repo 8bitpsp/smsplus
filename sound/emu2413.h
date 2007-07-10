@@ -15,7 +15,9 @@ extern "C" {
   #define EMU2413_API
 #endif
 
+#ifdef PSP
 #define PI 3.14159265358979
+#endif
 
 //typedef unsigned int uint32 ;
 //typedef int int32 ;

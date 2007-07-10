@@ -80,8 +80,8 @@ int sound_init(void)
     }
 
     /* Allocate sound output streams */
-    snd.output[0] = malloc(snd.buffer_size);
-    snd.output[1] = malloc(snd.buffer_size);
+    snd.output[0] = calloc(snd.sample_count, sizeof(int16));
+    snd.output[1] = calloc(snd.sample_count, sizeof(int16));
     if(!snd.output[0] || !snd.output[1]) return 0;
 
     /* Set up buffer pointers */

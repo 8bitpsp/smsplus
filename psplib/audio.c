@@ -184,7 +184,7 @@ void pspAudioShutdown()
 void pspAudioSetVolume(int channel, int left, int right)
 {
   AudioStatus[channel].LeftVolume = left;
-  AudioStatus[channel].RightVolume  = right;
+  AudioStatus[channel].RightVolume = right;
 }
 
 static int AudioChannelThread(int args, void *argp)

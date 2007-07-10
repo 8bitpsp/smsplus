@@ -309,21 +309,24 @@ int pspImageSavePngOpen(FILE *fp, const PspImage* image)
 {
   unsigned char *bitmap;
   const unsigned short *pixel;
-  int i, j;
+  int i, j, width, height;
 
-  int size = sizeof(u8) * image->Viewport.Width * image->Viewport.Height * 3;
-  if (!(bitmap = (u8*)malloc(size)))
+  width = image->Viewport.Width;
+  height = image->Viewport.Height;
+
+  if (!(bitmap = (u8*)malloc(sizeof(u8) * width * height * 3)))
     return 0;
 
   pixel = image->Pixels + (image->Viewport.Y * image->Width);
-  for (i = 0; i < image->Viewport.Height; i++)
+
+  for (i = 0; i < height; i++)
   {
     pixel += image->Viewport.X;
-    for (j = 0; j < image->Viewport.Width; j++, pixel++)
+    for (j = 0; j < width; j++, pixel++)
     {
-      bitmap[i * image->Viewport.Width * 3 + j * 3 + 0] = RED(*pixel);
-      bitmap[i * image->Viewport.Width * 3 + j * 3 + 1] = GREEN(*pixel);
-      bitmap[i * image->Viewport.Width * 3 + j * 3 + 2] = BLUE(*pixel);
+      bitmap[i * width * 3 + j * 3 + 0] = RED(*pixel);
+      bitmap[i * width * 3 + j * 3 + 1] = GREEN(*pixel);
+      bitmap[i * width * 3 + j * 3 + 2] = BLUE(*pixel);
     }
   }
 
@@ -344,7 +347,7 @@ int pspImageSavePngOpen(FILE *fp, const PspImage* image)
     return 0;
   }
 
-  png_byte **buf = (png_byte**)malloc(image->Height * sizeof(png_byte*));
+  png_byte **buf = (png_byte**)malloc(height * sizeof(png_byte*));
   if (!buf)
   {
     png_destroy_write_struct( &pPngStruct, &pPngInfo );
@@ -353,8 +356,8 @@ int pspImageSavePngOpen(FILE *fp, const PspImage* image)
   }
 
   unsigned int y;
-  for (y = 0; y < image->Height; y++)
-    buf[y] = (byte*)&bitmap[y * image->Width * 3];
+  for (y = 0; y < height; y++)
+    buf[y] = (byte*)&bitmap[y * width * 3];
 
   if (setjmp( pPngStruct->jmpbuf ))
   {
@@ -365,7 +368,7 @@ int pspImageSavePngOpen(FILE *fp, const PspImage* image)
   }
 
   png_init_io( pPngStruct, fp );
-  png_set_IHDR( pPngStruct, pPngInfo, image->Width, image->Height, 8, 
+  png_set_IHDR( pPngStruct, pPngInfo, width, height, 8,
     PNG_COLOR_TYPE_RGB,
     PNG_INTERLACE_NONE,
     PNG_COMPRESSION_TYPE_DEFAULT,
