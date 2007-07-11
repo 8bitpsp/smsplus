@@ -16,6 +16,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 PspInit* pspInitCreate()
 {
@@ -146,18 +147,17 @@ int pspInitLoad(PspInit *init, const char *filename)
 
 int pspInitSave(const PspInit *init, const char *filename)
 {
-  FILE *file = fopen(filename, "w");
-
-  if (!file) return 0;
+  FILE *file ;
+  if (!(file= fopen(filename, "w"))) return 0;
 
   struct PspInitSection *section;
   struct PspInitPair *pair;
 
   for (section = init->Head; section; section = section->Next)
   {
-    printf("[%s]\n", section->Name);
+    fprintf(file, "[%s]\n", section->Name);
     for (pair = section->Head; pair; pair = pair->Next)
-      printf("%s=%s\n", pair->Key, pair->Value);
+      fprintf(file, "%s=%s\n", pair->Key, pair->Value);
   }
 
   fclose(file);
@@ -203,7 +203,7 @@ static struct PspInitPair* LocateOrCreate(PspInit *init, const char *section_nam
   if (section) pair = FindPair(section, key_name);
   else
   {
-    /* TODO: Create section */
+    /* Create section */
     section = CreateSection(section_name);
 
     if (!init->Head) init->Head = section;
@@ -244,7 +244,11 @@ int pspInitGetInt(const PspInit *init, const char *section, const char *key, int
 char* pspInitGetString(const PspInit *init, const char *section, const char *key, const char *default_value)
 {
   struct PspInitPair *pair = Locate(init, section, key);
-  return strdup((pair) ? pair->Value : default_value);
+  return (pair)
+    ? strdup(pair->Value)
+    : (default_value)
+      ? strdup(default_value)
+      : NULL;
 }
 
 void pspInitSetInt(PspInit *init, const char *section, const char *key, int value)

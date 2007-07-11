@@ -318,9 +318,9 @@ int pspImageSavePngOpen(FILE *fp, const PspImage* image)
     return 0;
 
   pixel = image->Pixels + (image->Viewport.Y * image->Width);
-
   for (i = 0; i < height; i++)
   {
+    /* Skip to the start of the viewport */
     pixel += image->Viewport.X;
     for (j = 0; j < width; j++, pixel++)
     {
@@ -328,6 +328,8 @@ int pspImageSavePngOpen(FILE *fp, const PspImage* image)
       bitmap[i * width * 3 + j * 3 + 1] = GREEN(*pixel);
       bitmap[i * width * 3 + j * 3 + 2] = BLUE(*pixel);
     }
+    /* Skip to the end of the line */
+    pixel += image->Width - (image->Viewport.X + width);
   }
 
   png_struct *pPngStruct = png_create_write_struct( PNG_LIBPNG_VER_STRING,

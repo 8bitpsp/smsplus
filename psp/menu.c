@@ -22,6 +22,7 @@
 #include "ctrl.h"
 #include "psp.h"
 #include "util.h"
+#include "init.h"
 
 #define TAB_QUICKLOAD 0
 #define TAB_STATE     1
@@ -59,6 +60,7 @@ static const char *QuickloadFilter[] = { "SMS", "GG", "ZIP", '\0' },
 static const char *ScreenshotDir = "screens";
 static const char *SaveStateDir = "savedata";
 static const char *ButtonConfigFile = "buttons";
+static const char *OptionsFile = "smsplus.ini";
 
 char *GameName;
 char *ScreenshotPath;
@@ -80,6 +82,7 @@ static const char *TabLabel[] =
 };
 
 static void LoadOptions();
+static int  SaveOptions();
 static void InitOptionDefaults();
 
 static void DisplayStateTab();
@@ -1059,56 +1062,66 @@ static int SaveButtonConfig()
 /* Load options */
 void LoadOptions()
 {
-InitOptionDefaults();
-/*
   char *path = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(OptionsFile) + 1));
   sprintf(path, "%s%s", pspGetAppDirectory(), OptionsFile);
 
-  /* Initialize INI structure *
-  INIFile ini;
-  InitINI(&ini);
+  /* Initialize INI structure */
+  PspInit *init = pspInitCreate();
 
-  /* Read the file *
-  if (!LoadINI(&ini, path))
+  /* Read the file */
+  if (!pspInitLoad(init, path))
   {
-    /* File does not exist; load defaults *
-    TrashINI(&ini);
+    /* File does not exist; load defaults */
     InitOptionDefaults();
   }
   else
   {
-    char path[PSP_FILEIO_MAX_PATH_LEN + 1];
+    /* Load values */
+    SmsOptions.DisplayMode = pspInitGetInt(init, "Video", "Display Mode", DISPLAY_MODE_UNSCALED);
+    SmsOptions.UpdateFreq = pspInitGetInt(init, "Video", "Update Frequency", 60);
+    SmsOptions.Frameskip = pspInitGetInt(init, "Video", "Frameskip", 1);
+    SmsOptions.VSync = pspInitGetInt(init, "Video", "VSync", 0);
+    SmsOptions.ClockFreq = pspInitGetInt(init, "Video", "PSP Clock Frequency", 222);
+    SmsOptions.ShowFps = pspInitGetInt(init, "Video", "Show FPS", 0);
+    SmsOptions.ControlMode = pspInitGetInt(init, "Menu", "Control Mode", 0);
 
-    /* Load values *
-    DisplayMode = INIGetInteger(&ini, "Video", "Display Mode", DISPLAY_MODE_UNSCALED);
-    UpdateFreq = INIGetInteger(&ini, "Video", "Update Frequency", 60);
-    Frameskip = INIGetInteger(&ini, "Video", "Frameskip", 1);
-    VSync = INIGetInteger(&ini, "Video", "VSync", 0);
-    ClockFreq = INIGetInteger(&ini, "Video", "PSP Clock Frequency", 222);
-    ShowFps = INIGetInteger(&ini, "Video", "Show FPS", 0);
-    ControlMode = INIGetInteger(&ini, "Menu", "Control Mode", 0);
-
-    Mode = (Mode&~MSX_VIDEO) | INIGetInteger(&ini, "System", "Timing", Mode & MSX_VIDEO);
-    Mode = (Mode&~MSX_MODEL) | INIGetInteger(&ini, "System", "Model", Mode & MSX_MODEL);
-    RAMPages = INIGetInteger(&ini, "System", "RAM Pages", RAMPages);
-    VRAMPages = INIGetInteger(&ini, "System", "VRAM Pages", VRAMPages);
-
-    if (DiskPath) { free(DiskPath); DiskPath = NULL; }
-    if (CartPath) { free(CartPath); CartPath = NULL; }
-    if (Quickload) { free(Quickload); Quickload = NULL; }
-
-    if (INIGetString(&ini, "File", "Disk Path", path, PSP_FILEIO_MAX_PATH_LEN))
-      DiskPath = strdup(path);
-    if (INIGetString(&ini, "File", "Cart Path", path, PSP_FILEIO_MAX_PATH_LEN))
-      CartPath = strdup(path);
-    if (INIGetString(&ini, "File", "Game Path", path, PSP_FILEIO_MAX_PATH_LEN))
-      Quickload = strdup(path);
+    if (GamePath) free(GamePath);
+    GamePath = pspInitGetString(init, "File", "Game Path", NULL);
   }
 
-  /* Clean up *
+  /* Clean up */
   free(path);
-  TrashINI(&ini);
-*/
+  pspInitDestroy(init);
+}
+
+/* Save options */
+static int SaveOptions()
+{
+  char *path = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(OptionsFile) + 1));
+  sprintf(path, "%s%s", pspGetAppDirectory(), OptionsFile);
+
+  /* Initialize INI structure */
+  PspInit *init = pspInitCreate();
+
+  /* Set values */
+  pspInitSetInt(init, "Video", "Display Mode", SmsOptions.DisplayMode);
+  pspInitSetInt(init, "Video", "Update Frequency", SmsOptions.UpdateFreq);
+  pspInitSetInt(init, "Video", "Frameskip", SmsOptions.Frameskip);
+  pspInitSetInt(init, "Video", "VSync", SmsOptions.VSync);
+  pspInitSetInt(init, "Video", "PSP Clock Frequency",SmsOptions.ClockFreq);
+  pspInitSetInt(init, "Video", "Show FPS", SmsOptions.ShowFps);
+  pspInitSetInt(init, "Menu", "Control Mode", SmsOptions.ControlMode);
+
+  if (GamePath) pspInitSetString(init, "File", "Game Path", GamePath);
+
+  /* Save INI file */
+  int status = pspInitSave(init, path);
+
+  /* Clean up */
+  pspInitDestroy(init);
+  free(path);
+
+  return status;
 }
 
 /* Initialize options to system defaults */
@@ -1121,6 +1134,7 @@ void InitOptionDefaults()
   SmsOptions.VSync = 0;
   SmsOptions.ClockFreq = 222;
   SmsOptions.ShowFps = 0;
+  GamePath = NULL;
 }
 
 /* Load state icon */
@@ -1187,6 +1201,9 @@ PspImage* SaveState(const char *path, PspImage *icon)
 void TrashMenu()
 {
   TrashEmulator();
+
+  /* Save options */
+  SaveOptions();
 
   /* Trash menus */
   pspMenuDestroy(OptionUiMenu.Menu);
