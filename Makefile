@@ -20,7 +20,8 @@ BUILD_SOUND=$(SOUND)/sound.o $(SOUND)/sn76489.o $(SOUND)/emu2413.o \
 BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
              $(PSPLIB)/video.o $(PSPLIB)/audio.o $(PSPLIB)/fileio.o \
              $(PSPLIB)/menu.o $(PSPLIB)/ui.o $(PSPLIB)/ctrl.o \
-             $(PSPLIB)/kybd.o $(PSPLIB)/perf.o $(PSPLIB)/util.o
+             $(PSPLIB)/kybd.o $(PSPLIB)/perf.o $(PSPLIB)/util.o \
+						 $(PSPLIB)/init.o
 BUILD_SMSPLUS=$(SMSPPSP)/emumain.o $(SMSPPSP)/menu.o $(SMSPPSP)/main.o
 
 OBJS=$(BUILD_PSPLIB) $(BUILD_SOUND) $(BUILD_Z80) $(BUILD_MINIZIP) \
@@ -47,6 +48,7 @@ $(PSPLIB)/kybd.o:   $(PSPLIB)/kybd.c $(PSPLIB)/kybd.h \
                     $(PSPLIB)/ctrl.c $(PSPLIB)/video.c \
                     $(PSPLIB)/image.c $(PSPLIB)/font.c
 $(PSPLIB)/menu.o:   $(PSPLIB)/menu.c $(PSPLIB)/menu.h
+$(PSPLIB)/init.o:   $(PSPLIB)/init.c $(PSPLIB)/init.h
 $(PSPLIB)/psp.o:    $(PSPLIB)/psp.c $(PSPLIB)/psp.h \
                     $(PSPLIB)/fileio.c
 $(PSPLIB)/ui.o:     $(PSPLIB)/ui.c $(PSPLIB)/ui.h \

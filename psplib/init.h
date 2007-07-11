@@ -37,8 +37,15 @@ typedef struct
 } PspInit;
 
 PspInit* pspInitCreate();
-int pspInitParse(PspInit *init, const char *file);
-void pspInitDestroy(PspInit *init);
+void  pspInitDestroy(PspInit *init);
+
+int   pspInitLoad(PspInit *init, const char *file);
+int   pspInitSave(const PspInit *init, const char *file);
+
+int   pspInitGetInt(const PspInit *init, const char *section, const char *key, int default_value);
+void  pspInitSetInt(PspInit *init, const char *section, const char *key, int value);
+char* pspInitGetString(const PspInit *init, const char *section, const char *key, const char *default_value);
+void  pspInitSetString(PspInit *init, const char *section, const char *key, const char *string);
 
 #ifdef __cplusplus
 }
