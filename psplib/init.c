@@ -52,6 +52,7 @@ static struct PspInitPair *CreatePair(char *string)
   if (!(name = (char*)malloc(sizeof(char) * (len + 1))))
     return NULL;
   strncpy(name, string, len);
+  name[len] = '\0';
 
   /* Copy VALUE */
   if (!(value = strdup(ptr + 1)))
@@ -61,6 +62,7 @@ static struct PspInitPair *CreatePair(char *string)
   }
   len = strlen(value);
   if (value[len - 1] == '\n') value[len - 1] = '\0';
+  value[len] = '\0';
 
   /* Create struct */
   struct PspInitPair *pair

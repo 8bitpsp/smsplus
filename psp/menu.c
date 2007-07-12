@@ -612,7 +612,7 @@ void OnGenericRender(const void *uiobject, const void *item_obj)
 
     /* Draw background of active tab */
     if (i == TabIndex)
-      pspVideoFillRect(x - 5, 0, x + width + 5, height + 1, COLOR(0x17,0x00,0x79,0xff));
+      pspVideoFillRect(x - 5, 0, x + width + 5, height + 1, COLOR(0x74,0x74,0xbe,0xff));
 
     /* Draw name of tab */
     pspVideoPrint(UiMetric.Font, x, 0, TabLabel[i], PSP_VIDEO_WHITE);

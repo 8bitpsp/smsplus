@@ -169,7 +169,7 @@ int ParseInput()
   /* Check the input */
   if (pspCtrlPollControls(&pad))
   {
-    //* DEBUGGING
+    /* DEBUGGING
     if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
       == (PSP_CTRL_SELECT | PSP_CTRL_START))
         pspUtilSaveVramSeq(ScreenshotPath, "game");
@@ -231,7 +231,6 @@ void RenderVideo()
   /* Show FPS counter */
   if (SmsOptions.ShowFps)
   {
-    /* AKTODO */
     static char fps_display[32];
     sprintf(fps_display, " %3.02f", pspPerfGetFps(&FpsCounter));
 
