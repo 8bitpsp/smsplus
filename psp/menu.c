@@ -729,7 +729,7 @@ int OnMenuOk(const void *uimenu, const void* sel_item)
     case SYSTEM_SCRNSHOT:
 
       /* Save screenshot */
-      if (!pspUtilSavePngSeq(ScreenshotPath, GameName, Screen))
+      if (!pspUtilSavePngSeq(ScreenshotPath, pspFileIoGetFilename(GameName), Screen))
         pspUiAlert("ERROR: Screenshot not saved");
       else
         pspUiAlert("Screenshot saved successfully");
