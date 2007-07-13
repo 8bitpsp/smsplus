@@ -796,22 +796,6 @@ int OnQuickloadOk(const void *browser, const void *path)
 
   system_poweron();
 
-  /* Reset viewport */
-  if (IS_GG)
-  {
-    Screen->Viewport.X = 48;
-    Screen->Viewport.Y = 24;
-    Screen->Viewport.Width = 160;
-    Screen->Viewport.Height = 144;
-  }
-  else
-  {
-    Screen->Viewport.X = 0;
-    Screen->Viewport.Y = 0;
-    Screen->Viewport.Width = 256;
-    Screen->Viewport.Height = 192;
-  }
-
   ResumeEmulation = 1;
   return 1;
 }

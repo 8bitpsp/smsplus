@@ -67,12 +67,29 @@ void InitEmulator()
   snd.sample_rate = 44100;
   snd.mixer_callback = NULL;
 
+  sms.use_fm = 1;
   sms.territory = TERRITORY_EXPORT;
 }
 
 void RunEmulator()
 {
   float ratio;
+
+  /* Reset viewport */
+  if (IS_GG)
+  {
+    Screen->Viewport.X = 48;
+    Screen->Viewport.Y = 24;
+    Screen->Viewport.Width = 160;
+    Screen->Viewport.Height = 144;
+  }
+  else
+  {
+    Screen->Viewport.X = 0;
+    Screen->Viewport.Y = 0;
+    Screen->Viewport.Width = 256;
+    Screen->Viewport.Height = 192;
+  }
 
   /* Recompute screen size/position */
   switch (SmsOptions.DisplayMode)
