@@ -36,6 +36,7 @@ extern char *ScreenshotPath;
 inline int ParseInput();
 inline void RenderVideo();
 void AudioCallback(void* buf, unsigned int *length, void *userdata);
+void MixerCallback(int16 **stream, int16 **output, int length);
 
 void InitEmulator()
 {
@@ -60,14 +61,14 @@ void InitEmulator()
   bitmap.viewport.h = 192;
 
   /* Initialize sound structure */
-  snd.fm_which = SND_EMU2413;
+  snd.fm_which = SmsOptions.SoundEngine; //SND_EMU2413;
   snd.fps = FPS_NTSC;
   snd.fm_clock = CLOCK_NTSC;
   snd.psg_clock = CLOCK_NTSC;
   snd.sample_rate = 44100;
-  snd.mixer_callback = NULL;
+  snd.mixer_callback = MixerCallback;
 
-  sms.use_fm = 1;
+/*  sms.use_fm = 1; */ // Seems to cause crashes
   sms.territory = TERRITORY_EXPORT;
 }
 
@@ -89,7 +90,15 @@ void RunEmulator()
     Screen->Viewport.Y = 0;
     Screen->Viewport.Width = 256;
     Screen->Viewport.Height = 192;
+
+    if (!SmsOptions.VertStrip)
+    {
+      Screen->Viewport.X += 8;
+      Screen->Viewport.Width -= 8;
+    }
   }
+
+  pspImageClear(Screen, 0x8000);
 
   /* Recompute screen size/position */
   switch (SmsOptions.DisplayMode)
@@ -273,6 +282,22 @@ void RenderVideo()
 
   /* Swap buffers */
   pspVideoSwapBuffers();
+}
+
+/* Generic FM+PSG stereo mixer callback */
+void MixerCallback(int16 **stream, int16 **output, int length)
+{
+  /* Set up buffer pointers */
+  int16 **fm_buffer = (int16 **)&stream[STREAM_FM_MO];
+  int16 **psg_buffer = (int16 **)&stream[STREAM_PSG_L];
+  int i;
+
+  for(i = 0; i < length; i++)
+  {
+    int16 temp = (fm_buffer[0][i] + fm_buffer[1][i]) >> 1;
+    output[0][i] = (temp + psg_buffer[0][i]) << 1;
+    output[1][i] = (temp + psg_buffer[1][i]) << 1;
+  }
 }
 
 void AudioCallback(void* buf, unsigned int *length, void *userdata)

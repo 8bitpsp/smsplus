@@ -40,8 +40,10 @@
 #define OPTION_SHOW_FPS     6
 #define OPTION_CONTROL_MODE 7
 
-#define SYSTEM_SCRNSHOT    1
-#define SYSTEM_RESET       2
+#define SYSTEM_SCRNSHOT     1
+#define SYSTEM_RESET        2
+#define SYSTEM_VERT_STRIP   3
+#define SYSTEM_SOUND_ENGINE 4
 
 extern PspImage *Screen;
 
@@ -120,6 +122,10 @@ void OnSystemRender(const void *uiobject, const void *item_obj);
 
 /* Define various menu options */
 static const PspMenuOptionDef
+  SoundEngineOptions[] = {
+    { "Faster", (void*)SND_YM2413 },
+    { "More accurate", (void*)SND_EMU2413 },
+  },
   ToggleOptions[] = {
     { "Disabled", (void*)0 },
     { "Enabled", (void*)1 },
@@ -143,6 +149,7 @@ static const PspMenuOptionDef
     { NULL, NULL } },
   PspClockFreqOptions[] = {
     { "222 MHz", (void*)222 },
+    { "266 MHz", (void*)266 },
     { "300 MHz", (void*)300 },
     { "333 MHz", (void*)333 },
     { NULL, NULL } },
@@ -232,6 +239,12 @@ static const PspMenuItemDef
     { NULL, NULL }
   },
   SystemMenuDef[] = {
+    { "\tHardware", NULL, NULL, -1, NULL },
+    { "Sound Engine", (void*)SYSTEM_SOUND_ENGINE,
+      SoundEngineOptions, -1, "\026\250\020 Select sound engine emulation" },
+    { "\tGame", NULL, NULL, -1, NULL },
+    { "Vertical bar", (void*)SYSTEM_VERT_STRIP,
+      ToggleOptions, -1, "\026\250\020 Show/hide the leftmost vertical bar (SMS)" },
     { "\tSystem", NULL, NULL, -1, NULL },
     { "Reset",            (void*)SYSTEM_RESET,
       NULL,             -1, "\026\001\020 Reset" },
@@ -361,6 +374,9 @@ const int ButtonMapId[] =
 
 void InitMenu()
 {
+  /* Initialize options */
+  LoadOptions();
+
   InitEmulator();
 
   /* Reset variables */
@@ -406,9 +422,6 @@ void InitMenu()
     = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(ScreenshotDir) + 2));
   sprintf(ScreenshotPath, "%s%s/", pspGetAppDirectory(), ScreenshotDir);
 
-  /* Initialize options */
-  LoadOptions();
-
   /* Load default configuration */
   LoadButtonConfig();
 
@@ -437,7 +450,7 @@ void InitMenu()
   UiMetric.MenuItemMargin = 20;
   UiMetric.MenuSelOptionBg = PSP_VIDEO_BLACK;
   UiMetric.MenuOptionBoxColor = PSP_VIDEO_GRAY;
-  UiMetric.MenuOptionBoxBg = COLOR(0, 0, 0, 0xBB);
+  UiMetric.MenuOptionBoxBg = COLOR(0, 0, 33, 0xBB);
   UiMetric.MenuDecorColor = PSP_VIDEO_YELLOW;
   UiMetric.DialogFogColor = COLOR(0, 0, 0, 88);
   UiMetric.TitlePadding = 4;
@@ -477,6 +490,12 @@ void DisplayMenu()
       pspUiOpenBrowser(&QuickloadBrowser, (GameName) ? GameName : GamePath);
       break;
     case TAB_SYSTEM:
+      item = pspMenuFindItemByUserdata(SystemUiMenu.Menu,
+        (void*)SYSTEM_VERT_STRIP);
+      pspMenuSelectOptionByValue(item, (void*)SmsOptions.VertStrip);
+      item = pspMenuFindItemByUserdata(SystemUiMenu.Menu,
+        (void*)SYSTEM_SOUND_ENGINE);
+      pspMenuSelectOptionByValue(item, (void*)SmsOptions.SoundEngine);
       pspUiOpenMenu(&SystemUiMenu, NULL);
       break;
     case TAB_OPTION:
@@ -534,7 +553,7 @@ void OnSplashRender(const void *splash, const void *null)
   int fh, i, x, y, height;
   const char *lines[] = 
   { 
-    "SMS Plus version 1.2.1 ("__DATE__")",
+    "SMS Plus version 1.2.2 ("__DATE__")",
     "\026http://psp.akop.org/smsplus",
     " ",
     "2007 Akop Karapetyan",
@@ -665,6 +684,24 @@ int  OnMenuItemChanged(const struct PspUiMenu *uimenu,
   if (uimenu == &ControlUiMenu)
   {
     ActiveConfig.ButtonMap[(int)item->Userdata] = (unsigned int)option->Value;
+  }
+  else if (uimenu == &SystemUiMenu)
+  {
+    switch((int)item->Userdata)
+    {
+    case SYSTEM_VERT_STRIP:
+      SmsOptions.VertStrip = (int)option->Value;
+      break;
+    case SYSTEM_SOUND_ENGINE:
+      if (SmsOptions.SoundEngine != (int)option->Value)
+      {
+        pspUiFlashMessage("Initializing sound\nPlease wait...");
+        sound_shutdown();
+        snd.fm_which = (SmsOptions.SoundEngine = (int)option->Value);
+        sound_init();
+      }
+      break;
+    }
   }
   else if (uimenu == &OptionUiMenu)
   {
@@ -1068,6 +1105,8 @@ void LoadOptions()
     SmsOptions.ClockFreq = pspInitGetInt(init, "Video", "PSP Clock Frequency", 222);
     SmsOptions.ShowFps = pspInitGetInt(init, "Video", "Show FPS", 0);
     SmsOptions.ControlMode = pspInitGetInt(init, "Menu", "Control Mode", 0);
+    SmsOptions.VertStrip = pspInitGetInt(init, "Game", "Vertical Strip", 1);
+    SmsOptions.SoundEngine = pspInitGetInt(init, "System", "Sound Engine", SND_YM2413);
 
     if (GamePath) free(GamePath);
     GamePath = pspInitGetString(init, "File", "Game Path", NULL);
@@ -1095,6 +1134,8 @@ static int SaveOptions()
   pspInitSetInt(init, "Video", "PSP Clock Frequency",SmsOptions.ClockFreq);
   pspInitSetInt(init, "Video", "Show FPS", SmsOptions.ShowFps);
   pspInitSetInt(init, "Menu", "Control Mode", SmsOptions.ControlMode);
+  pspInitSetInt(init, "Game", "Vertical Strip", SmsOptions.VertStrip);
+  pspInitSetInt(init, "System", "Sound Engine", SmsOptions.SoundEngine);
 
   if (GamePath) pspInitSetString(init, "File", "Game Path", GamePath);
 
@@ -1118,6 +1159,8 @@ void InitOptionDefaults()
   SmsOptions.VSync = 0;
   SmsOptions.ClockFreq = 222;
   SmsOptions.ShowFps = 0;
+  SmsOptions.VertStrip = 1;
+  SmsOptions.SoundEngine = SND_YM2413;
   GamePath = NULL;
 }
 

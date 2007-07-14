@@ -57,7 +57,8 @@ void pspShutdown()
 
 void pspSetClockFrequency(int freq)
 {
-  if (freq != 222 && freq != 333 && freq != 300) freq = 222;
+  if (freq < 222) freq = 222;
+  else if (freq > 333) freq = 333;
   scePowerSetClockFrequency(freq, freq, freq/2);
 }
 

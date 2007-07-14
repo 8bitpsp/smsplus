@@ -92,12 +92,15 @@ void system_frame(int skip_render)
     }
 }
 
-
-
-
 void system_reinit(void)
 {
-    /* Palette fix */
+    /* AK: This is needed to fix a palette corruption problem */
+    /* when switching between GG and SMS */
+    sms_shutdown();
+    pio_shutdown();
+    vdp_shutdown();
+    render_shutdown();
+
     sms_init();
     pio_init();
     vdp_init();

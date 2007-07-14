@@ -8,7 +8,7 @@ Z80=./cpu
 
 TARGET=smsppsp
 EXTRA_TARGETS=EBOOT.PBP
-PSP_EBOOT_TITLE=SMS Plus PSP 1.2.1
+PSP_EBOOT_TITLE=SMS Plus PSP 1.2.2
 PSP_EBOOT_ICON=$(DATA)/smsp-icon.png
 
 BUILD_Z80=$(Z80)/z80.o
@@ -21,7 +21,7 @@ BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
              $(PSPLIB)/video.o $(PSPLIB)/audio.o $(PSPLIB)/fileio.o \
              $(PSPLIB)/menu.o $(PSPLIB)/ui.o $(PSPLIB)/ctrl.o \
              $(PSPLIB)/kybd.o $(PSPLIB)/perf.o $(PSPLIB)/util.o \
-						 $(PSPLIB)/init.o
+             $(PSPLIB)/init.o
 BUILD_SMSPLUS=$(SMSPPSP)/emumain.o $(SMSPPSP)/menu.o $(SMSPPSP)/main.o
 
 OBJS=$(BUILD_PSPLIB) $(BUILD_SOUND) $(BUILD_Z80) $(BUILD_MINIZIP) \
