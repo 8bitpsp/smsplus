@@ -51,7 +51,6 @@ static int   TexFilter;
 static void *DisplayBuffer;
 static void *DrawBuffer;
 static int   PixelFormat;
-static int   TexFormat;
 static int   TexColor;
 static void *VramOffset;
 static void *VramChunkOffset;
@@ -59,13 +58,12 @@ static unsigned short __attribute__((aligned(16))) ScratchBuffer[BUF_WIDTH * SCR
 static unsigned int VramBufferOffset;
 static unsigned int __attribute__((aligned(16))) List[262144]; /* TODO: ? */
 
-static void* _pspVideoGetBuffer(const PspImage *image);
+static void* GetBuffer(const PspImage *image);
 int _pspVideoPutChar(const PspFont *font, int sx, int sy, unsigned char sym, int color);
 
 void pspVideoInit()
 {
   PixelFormat = GU_PSM_5551;
-  TexFormat = GU_PSM_5551;
   TexColor = GU_COLOR_5551;
   TexFilter = GU_LINEAR;
   VramBufferOffset = 0;
@@ -121,8 +119,9 @@ void pspVideoInit()
   sceGuDisplay(1);
 }
 
-void* _pspVideoGetBuffer(const PspImage *image)
+void* GetBuffer(const PspImage *image)
 {
+  /* TODO: Account for variable bpp and offsets */
   int i, j, w, h, so, io;
   static int last_w = -1, last_h = -1;
 
@@ -134,7 +133,8 @@ void* _pspVideoGetBuffer(const PspImage *image)
 
   for (i = 0; i < h; i++)
     for (j = 0, so = i * BUF_WIDTH, io = i * image->Width; j < w; j++, so++, io++)
-      ScratchBuffer[so] = image->Pixels[io];
+      ;//ScratchBuffer[so] = image->Pixels[io];
+/* AKTODO!!: implement */
 
   last_w = w;
   last_h = h;
@@ -154,7 +154,7 @@ void pspVideoEnd()
   sceGuFinish();
   sceGuSync(0, 0);
 }
-
+/*
 void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
 {
   sceGuScissor(dx, dy, dx + dw, dy + dh);
@@ -195,10 +195,10 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
 
       vertices[0].color
         = vertices[1].color
-        = vertices[0].z 
+        = vertices[0].z
         = vertices[1].z = 0;
 
-      sceGuDrawArray(GU_SPRITES, 
+      sceGuDrawArray(GU_SPRITES,
         GU_TEXTURE_16BIT | TexColor | GU_VERTEX_16BIT | GU_TRANSFORM_2D,
         2, 0, vertices);
     }
@@ -208,7 +208,7 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
 
   sceGuScissor(0, 0, SCR_WIDTH, SCR_HEIGHT);
 }
-
+*/
 void pspVideoPutImageDirect(const PspImage *image, int dx, int dy, int dw, int dh)
 {
   sceGuScissor(dx, dy, dx + dw, dy + dh);
@@ -226,7 +226,7 @@ void pspVideoPutImageDirect(const PspImage *image, int dx, int dy, int dw, int d
   else
   {
     sceGuEnable(GU_TEXTURE_2D);
-    sceGuTexMode(TexFormat, 0, 0, GU_FALSE);
+    sceGuTexMode(image->TextureFormat, 0, 0, GU_FALSE);
     sceGuTexImage(0, image->Width, image->Width, image->Width, pixels);
     sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
     sceGuTexFilter(TexFilter, TexFilter);
@@ -253,6 +253,76 @@ void pspVideoPutImageDirect(const PspImage *image, int dx, int dy, int dw, int d
         = vertices[1].z = 0;
 
       sceGuDrawArray(GU_SPRITES, 
+        GU_TEXTURE_16BIT | TexColor | GU_VERTEX_16BIT | GU_TRANSFORM_2D,
+        2, 0, vertices);
+    }
+
+    sceGuDisable(GU_TEXTURE_2D);
+  }
+
+  sceGuScissor(0, 0, SCR_WIDTH, SCR_HEIGHT);
+}
+
+void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
+{
+  sceGuScissor(dx, dy, dx + dw, dy + dh);
+
+  void *pixels;
+  int width;
+
+  if (image->PowerOfTwo)
+  {
+    pixels = image->Pixels;
+    width = image->Width;
+  }
+  else
+  {
+    pixels = GetBuffer(image);
+    width = BUF_WIDTH;
+  }
+
+  if (dw == image->Viewport.Width && dh == image->Viewport.Height)
+  {
+    /* AKTODO!!: Fix this */
+    sceGuCopyImage(PixelFormat,
+      image->Viewport.X, image->Viewport.Y,
+      image->Viewport.Width, image->Viewport.Height,
+      width, pixels, dx, dy,
+      BUF_WIDTH, (void *)(VRAM_START + (u32)VramOffset));
+  }
+  else
+  {
+    sceGuEnable(GU_TEXTURE_2D);
+  	sceGuClutMode(PixelFormat, 0, 0, 0); /* 0xff, 0); */
+  	sceGuClutLoad(32 /*(256/8)*/, image->Palette);
+    sceGuTexMode(image->TextureFormat, 0, 0, GU_FALSE);
+    sceGuTexImage(0, width, width, width, pixels);
+    /* AKTODO!!: play with the alpha setting */
+    sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
+    sceGuTexFilter(TexFilter, TexFilter);
+
+    struct TexVertex* vertices;
+    int start, end, sc_end, slsz_scaled;
+    slsz_scaled = ceil((float)dw * (float)SLICE_SIZE) / (float)image->Viewport.Width;
+
+    for (start = image->Viewport.X, end = image->Viewport.X + image->Viewport.Width, sc_end = dx + dw; start < end; start += SLICE_SIZE, dx += slsz_scaled)
+    {
+      vertices = (struct TexVertex*)sceGuGetMemory(2 * sizeof(struct TexVertex));
+
+      vertices[0].u = start;
+      vertices[0].v = image->Viewport.Y;
+      vertices[1].u = start + SLICE_SIZE;
+      vertices[1].v = image->Viewport.Height + image->Viewport.Y;
+
+      vertices[0].x = dx; vertices[0].y = dy;
+      vertices[1].x = dx + slsz_scaled; vertices[1].y = dy + dh;
+
+      vertices[0].color
+        = vertices[1].color
+        = vertices[0].z 
+        = vertices[1].z = 0;
+
+      sceGuDrawArray(GU_SPRITES,
         GU_TEXTURE_16BIT | TexColor | GU_VERTEX_16BIT | GU_TRANSFORM_2D,
         2, 0, vertices);
     }
@@ -479,13 +549,19 @@ PspImage* pspVideoGetVramBufferCopy()
   u16 *vram_addr = (u16*)((u8*)VRAM_START + 0x40000000);
   PspImage *image;
 
-  if (!(image = pspImageCreate(SCR_WIDTH, SCR_HEIGHT)))
+  if (!(image = pspImageCreate(SCR_WIDTH, SCR_HEIGHT, PSP_IMAGE_16BPP)))
     return NULL;
 
   int i, j;
+  unsigned short *pixel;
   for (i = 0; i < image->Height; i++)
+  {
     for (j = 0; j < image->Width; j++)
-      image->Pixels[i * image->Width + j] = *(vram_addr + (i * BUF_WIDTH + j));
+    {
+      pixel = (unsigned short*)(image->Pixels + (i * image->Width + j));
+      *pixel = *(vram_addr + (i * BUF_WIDTH + j));
+    }
+  }
 
   return image;
 }

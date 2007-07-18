@@ -389,7 +389,7 @@ void InitMenu()
   Background = pspImageLoadPng("background.png");
 
   /* Init NoSaveState icon image */
-  NoSaveIcon=pspImageCreate(136, 114);
+  NoSaveIcon=pspImageCreate(136, 114, PSP_IMAGE_16BPP);
   pspImageClear(NoSaveIcon, RGB(0x0c,0,0x3f));
 
   /* Initialize state menu */

@@ -29,6 +29,7 @@ int  pspAudioInit(int sample_count);
 void pspAudioSetVolume(int channel, int left, int right);
 void pspAudioSetChannelCallback(int channel, pspAudioCallback callback, void *userdata);
 void pspAudioShutdown();
+int  pspAudioOutputBlocking(unsigned int channel, void *buf);
 
 #ifdef __cplusplus
 }

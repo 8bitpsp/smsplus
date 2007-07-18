@@ -19,6 +19,9 @@ extern "C" {
 
 #include <stdio.h>
 
+#define PSP_IMAGE_INDEXED 8
+#define PSP_IMAGE_16BPP   16
+
 typedef struct
 {
   int X;
@@ -31,20 +34,23 @@ typedef struct
 {
   int Width;
   int Height;
-  unsigned short* Pixels;
+  void *Pixels;
   PspViewport Viewport;
-  int FreeBuffer;
+  char FreeBuffer;
+  char BytesPerPixel;
+  char Depth;
+  char PowerOfTwo;
+  unsigned int TextureFormat;
+  /* TODO: don't allocate if not necessary */
+  unsigned short Palette[256];
 } PspImage;
 
-PspImage* pspImageCreate(int width, int height);
-PspImage* pspImageCreateVram(int width, int height);
+PspImage* pspImageCreate(int width, int height, int bits_per_pixel);
+PspImage* pspImageCreateVram(int width, int height, int bits_per_pixel);
 void      pspImageDestroy(PspImage *image);
 PspImage* pspImageCreateThumbnail(const PspImage *image);
 PspImage* pspImageCreateCopy(const PspImage *image);
-void      pspImageClear(PspImage *image, unsigned short color);
-
-void pspImageDrawRect(PspImage *image, int sx, int sy, int dx, int dy, unsigned short color);
-void pspImageFillRect(PspImage *image, int sx, int sy, int dx, int dy, unsigned short color);
+void      pspImageClear(PspImage *image, unsigned int color);
 
 PspImage* pspImageLoadPng(const char *path);
 int       pspImageSavePng(const char *path, const PspImage* image);

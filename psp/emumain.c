@@ -43,15 +43,15 @@ void InitEmulator()
   ClearScreen = 0;
 
   /* Initialize screen buffer */
-  Screen = pspImageCreateVram(256, 192);
+  Screen = pspImageCreateVram(256, 192, PSP_IMAGE_INDEXED); //PSP_IMAGE_16BPP);
 
-  pspImageClear(Screen, 0x8000);
+  // pspImageClear(Screen, 0x8000);
 
   /* Set up bitmap structure */
   memset(&bitmap, 0, sizeof(bitmap_t));
   bitmap.width  = Screen->Width;
   bitmap.height = Screen->Height;
-  bitmap.depth  = 16;
+  bitmap.depth  = Screen->Depth;
   bitmap.granularity = (bitmap.depth >> 3);
   bitmap.pitch  = bitmap.width * bitmap.granularity;
   bitmap.data   = (uint8 *)Screen->Pixels;
@@ -251,8 +251,24 @@ void RenderVideo()
     pspVideoClearScreen();
   }
 
+	if (Screen->Depth == PSP_IMAGE_INDEXED && bitmap.pal.update)
+	{
+    int i, r, g, b;
+		for(i = 0; i < PALETTE_SIZE; i++)
+		{
+			r = bitmap.pal.color[i][0];
+			g = bitmap.pal.color[i][1];
+			b = bitmap.pal.color[i][2];
+
+			Screen->Palette[i]
+        = Screen->Palette[i + PALETTE_SIZE]
+			  = Screen->Palette[i + (2 * PALETTE_SIZE)]
+			  = Screen->Palette[i + (3 * PALETTE_SIZE)] = RGB(r,g,b);
+		}
+	}
+
   /* Draw the screen */
-  pspVideoPutImageDirect(Screen, ScreenX, ScreenY, ScreenW, ScreenH);
+  pspVideoPutImage(Screen, ScreenX, ScreenY, ScreenW, ScreenH);
 
   /* Show FPS counter */
   if (SmsOptions.ShowFps)
