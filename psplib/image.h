@@ -42,7 +42,7 @@ typedef struct
   char PowerOfTwo;
   unsigned int TextureFormat;
   /* TODO: don't allocate if not necessary */
-  unsigned short Palette[256];
+  unsigned short __attribute__((aligned(16))) Palette[256];
 } PspImage;
 
 PspImage* pspImageCreate(int width, int height, int bits_per_pixel);

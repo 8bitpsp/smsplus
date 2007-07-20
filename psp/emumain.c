@@ -43,7 +43,7 @@ void InitEmulator()
   ClearScreen = 0;
 
   /* Initialize screen buffer */
-  Screen = pspImageCreateVram(256, 192, PSP_IMAGE_INDEXED); //PSP_IMAGE_16BPP);
+  Screen = pspImageCreateVram(256, 192, PSP_IMAGE_INDEXED);
 
   // pspImageClear(Screen, 0x8000);
 
@@ -61,14 +61,14 @@ void InitEmulator()
   bitmap.viewport.h = 192;
 
   /* Initialize sound structure */
-  snd.fm_which = SmsOptions.SoundEngine; //SND_EMU2413;
+  snd.fm_which = SmsOptions.SoundEngine;
   snd.fps = FPS_NTSC;
   snd.fm_clock = CLOCK_NTSC;
   snd.psg_clock = CLOCK_NTSC;
   snd.sample_rate = 44100;
   snd.mixer_callback = MixerCallback;
 
-/*  sms.use_fm = 1; */ // Seems to cause crashes
+  sms.use_fm = 0;
   sms.territory = TERRITORY_EXPORT;
 }
 
@@ -79,17 +79,17 @@ void RunEmulator()
   /* Reset viewport */
   if (IS_GG)
   {
-    Screen->Viewport.X = 48;
-    Screen->Viewport.Y = 24;
-    Screen->Viewport.Width = 160;
-    Screen->Viewport.Height = 144;
+    bitmap.viewport.x = Screen->Viewport.X = 48;
+    bitmap.viewport.y = Screen->Viewport.Y = 24;
+    bitmap.viewport.w = Screen->Viewport.Width = 160;
+    bitmap.viewport.h = Screen->Viewport.Height = 144;
   }
   else
   {
-    Screen->Viewport.X = 0;
-    Screen->Viewport.Y = 0;
-    Screen->Viewport.Width = 256;
-    Screen->Viewport.Height = 192;
+    bitmap.viewport.x = Screen->Viewport.X = 0;
+    bitmap.viewport.y = Screen->Viewport.Y = 0;
+    bitmap.viewport.w = Screen->Viewport.Width = 256;
+    bitmap.viewport.h = Screen->Viewport.Height = 192;
 
     if (!SmsOptions.VertStrip)
     {
@@ -98,7 +98,7 @@ void RunEmulator()
     }
   }
 
-  pspImageClear(Screen, 0x8000);
+  pspImageClear(Screen, 0);
 
   /* Recompute screen size/position */
   switch (SmsOptions.DisplayMode)
@@ -253,19 +253,25 @@ void RenderVideo()
 
 	if (Screen->Depth == PSP_IMAGE_INDEXED && bitmap.pal.update)
 	{
-    int i, r, g, b;
+    unsigned char r, g, b;
+    unsigned short c, i;
+
 		for(i = 0; i < PALETTE_SIZE; i++)
 		{
-			r = bitmap.pal.color[i][0];
-			g = bitmap.pal.color[i][1];
-			b = bitmap.pal.color[i][2];
+      if (bitmap.pal.dirty[i])
+      {
+        r = bitmap.pal.color[i][0];
+        g = bitmap.pal.color[i][1];
+        b = bitmap.pal.color[i][2];
+        c = MAKE_PIXEL(r,g,b);
 
-			Screen->Palette[i]
-        = Screen->Palette[i + PALETTE_SIZE]
-			  = Screen->Palette[i + (2 * PALETTE_SIZE)]
-			  = Screen->Palette[i + (3 * PALETTE_SIZE)] = RGB(r,g,b);
-		}
-	}
+        Screen->Palette[i] = c;
+        Screen->Palette[i|0x20] = c;
+        Screen->Palette[i|0x40] = c;
+        Screen->Palette[i|0x60] = c;
+      }
+    }
+  }
 
   /* Draw the screen */
   pspVideoPutImage(Screen, ScreenX, ScreenY, ScreenW, ScreenH);
@@ -311,8 +317,8 @@ void MixerCallback(int16 **stream, int16 **output, int length)
   for(i = 0; i < length; i++)
   {
     int16 temp = (fm_buffer[0][i] + fm_buffer[1][i]) >> 1;
-    output[0][i] = (temp + psg_buffer[0][i]) << 1;
-    output[1][i] = (temp + psg_buffer[1][i]) << 1;
+    output[0][i] = (temp + psg_buffer[0][i]) << SmsOptions.SoundBoost;
+    output[1][i] = (temp + psg_buffer[1][i]) << SmsOptions.SoundBoost;
   }
 }
 
@@ -323,7 +329,7 @@ void AudioCallback(void* buf, unsigned int *length, void *userdata)
 
   for(i = 0; i < *length; i++) 
   {
-    OutBuf[i].Left = snd.output[0][i] * 2;
-    OutBuf[i].Right = snd.output[1][i] * 2;
+    OutBuf[i].Left = snd.output[0][i];
+    OutBuf[i].Right = snd.output[1][i];
   }
 }

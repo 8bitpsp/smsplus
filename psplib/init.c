@@ -62,7 +62,6 @@ static struct PspInitPair *CreatePair(char *string)
   }
   len = strlen(value);
   if (value[len - 1] == '\n') value[len - 1] = '\0';
-  value[len] = '\0';
 
   /* Create struct */
   struct PspInitPair *pair
@@ -89,7 +88,7 @@ int pspInitLoad(PspInit *init, const char *filename)
 
   struct PspInitSection *current_section = NULL;
   struct PspInitPair *tail;
-  char string[256], name[256];
+  char string[512], name[512];
   char *ptr;
   int len;
 
@@ -190,7 +189,6 @@ static struct PspInitPair* FindPair(const struct PspInitSection *section, const 
 static struct PspInitPair* Locate(const PspInit *init, const char *section_name, const char *key_name)
 {
   struct PspInitSection *section;
-
   if (!(section = FindSection(init, section_name)))
     return NULL;
 
@@ -246,11 +244,10 @@ int pspInitGetInt(const PspInit *init, const char *section, const char *key, int
 char* pspInitGetString(const PspInit *init, const char *section, const char *key, const char *default_value)
 {
   struct PspInitPair *pair = Locate(init, section, key);
-  return (pair)
-    ? strdup(pair->Value)
-    : (default_value)
-      ? strdup(default_value)
-      : NULL;
+  if (pair) return strdup(pair->Value);
+  else if (default_value) return strdup(default_value);
+
+  return NULL;
 }
 
 void pspInitSetInt(PspInit *init, const char *section, const char *key, int value)

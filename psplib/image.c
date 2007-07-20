@@ -58,7 +58,7 @@ PspImage* pspImageCreate(int width, int height, int bpp)
   image->Depth = bpp;
   memset(image->Palette, 0, sizeof(image->Palette));
 
-  switch (bpp)
+  switch (image->Depth)
   {
   case PSP_IMAGE_INDEXED:
     image->TextureFormat = GU_PSM_T8;
@@ -135,7 +135,7 @@ PspImage* pspImageCreateVram(int width, int height, int bpp)
   image->Depth = bpp;
   memset(image->Palette, 0, sizeof(image->Palette));
 
-  switch (bpp)
+  switch (image->Depth)
   {
   case PSP_IMAGE_INDEXED:
     image->TextureFormat = GU_PSM_T8;

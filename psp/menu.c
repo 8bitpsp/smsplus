@@ -44,6 +44,7 @@
 #define SYSTEM_RESET        2
 #define SYSTEM_VERT_STRIP   3
 #define SYSTEM_SOUND_ENGINE 4
+#define SYSTEM_SOUND_BOOST  5
 
 extern PspImage *Screen;
 
@@ -123,9 +124,15 @@ void OnSystemRender(const void *uiobject, const void *item_obj);
 /* Define various menu options */
 static const PspMenuOptionDef
   SoundEngineOptions[] = {
+    { "Disabled", (void*)SND_NULL },
     { "Faster", (void*)SND_YM2413 },
     { "More accurate", (void*)SND_EMU2413 },
-  },
+    { NULL, NULL } },
+  SoundBoostOptions[] = {
+    { "Off", (void*)0 },
+    { "2x", (void*)1 },
+    { "4x", (void*)2 },
+    { NULL, NULL } },
   ToggleOptions[] = {
     { "Disabled", (void*)0 },
     { "Enabled", (void*)1 },
@@ -240,8 +247,10 @@ static const PspMenuItemDef
   },
   SystemMenuDef[] = {
     { "\tHardware", NULL, NULL, -1, NULL },
-    { "Sound Engine", (void*)SYSTEM_SOUND_ENGINE,
-      SoundEngineOptions, -1, "\026\250\020 Select sound engine emulation" },
+    { "FM Emulation", (void*)SYSTEM_SOUND_ENGINE,
+      SoundEngineOptions, -1, "\026\250\020 Select FM emulation engine" },
+    { "Sound Boost", (void*)SYSTEM_SOUND_BOOST,
+      SoundBoostOptions, -1, "\026\250\020 Adjust volume scaling factor" },
     { "\tGame", NULL, NULL, -1, NULL },
     { "Vertical bar", (void*)SYSTEM_VERT_STRIP,
       ToggleOptions, -1, "\026\250\020 Show/hide the leftmost vertical bar (SMS)" },
@@ -374,16 +383,16 @@ const int ButtonMapId[] =
 
 void InitMenu()
 {
-  /* Initialize options */
-  LoadOptions();
-
-  InitEmulator();
-
   /* Reset variables */
   TabIndex = TAB_ABOUT;
   Background = NULL;
   GameName = NULL;
   GamePath = NULL;
+
+  /* Initialize options */
+  LoadOptions();
+
+  InitEmulator();
 
   /* Load the background image */
   Background = pspImageLoadPng("background.png");
@@ -496,6 +505,9 @@ void DisplayMenu()
       item = pspMenuFindItemByUserdata(SystemUiMenu.Menu,
         (void*)SYSTEM_SOUND_ENGINE);
       pspMenuSelectOptionByValue(item, (void*)SmsOptions.SoundEngine);
+      item = pspMenuFindItemByUserdata(SystemUiMenu.Menu,
+        (void*)SYSTEM_SOUND_BOOST);
+      pspMenuSelectOptionByValue(item, (void*)SmsOptions.SoundBoost);
       pspUiOpenMenu(&SystemUiMenu, NULL);
       break;
     case TAB_OPTION:
@@ -553,11 +565,11 @@ void OnSplashRender(const void *splash, const void *null)
   int fh, i, x, y, height;
   const char *lines[] = 
   { 
-    "SMS Plus version 1.2.2 ("__DATE__")",
+    "SMS Plus version 1.2.3 ("__DATE__")",
     "\026http://psp.akop.org/smsplus",
     " ",
-    "2007 Akop Karapetyan",
-    "1998-2004 Charles MacDonald",
+    "2007 Akop Karapetyan (port)",
+    "1998-2004 Charles MacDonald (emulation)",
     NULL
   };
 
@@ -700,6 +712,9 @@ int  OnMenuItemChanged(const struct PspUiMenu *uimenu,
         snd.fm_which = (SmsOptions.SoundEngine = (int)option->Value);
         sound_init();
       }
+      break;
+    case SYSTEM_SOUND_BOOST:
+      SmsOptions.SoundBoost = (int)option->Value;
       break;
     }
   }
@@ -1106,7 +1121,8 @@ void LoadOptions()
     SmsOptions.ShowFps = pspInitGetInt(init, "Video", "Show FPS", 0);
     SmsOptions.ControlMode = pspInitGetInt(init, "Menu", "Control Mode", 0);
     SmsOptions.VertStrip = pspInitGetInt(init, "Game", "Vertical Strip", 1);
-    SmsOptions.SoundEngine = pspInitGetInt(init, "System", "Sound Engine", SND_YM2413);
+    SmsOptions.SoundEngine = pspInitGetInt(init, "System", "FM Engine", SND_NULL);
+    SmsOptions.SoundBoost = pspInitGetInt(init, "System", "Sound Boost", 0);
 
     if (GamePath) free(GamePath);
     GamePath = pspInitGetString(init, "File", "Game Path", NULL);
@@ -1135,7 +1151,8 @@ static int SaveOptions()
   pspInitSetInt(init, "Video", "Show FPS", SmsOptions.ShowFps);
   pspInitSetInt(init, "Menu", "Control Mode", SmsOptions.ControlMode);
   pspInitSetInt(init, "Game", "Vertical Strip", SmsOptions.VertStrip);
-  pspInitSetInt(init, "System", "Sound Engine", SmsOptions.SoundEngine);
+  pspInitSetInt(init, "System", "FM Engine", SmsOptions.SoundEngine);
+  pspInitSetInt(init, "System", "Sound Boost", SmsOptions.SoundBoost);
 
   if (GamePath) pspInitSetString(init, "File", "Game Path", GamePath);
 
@@ -1160,7 +1177,8 @@ void InitOptionDefaults()
   SmsOptions.ClockFreq = 222;
   SmsOptions.ShowFps = 0;
   SmsOptions.VertStrip = 1;
-  SmsOptions.SoundEngine = SND_YM2413;
+  SmsOptions.SoundEngine = SND_NULL;
+  SmsOptions.SoundBoost = 0;
   GamePath = NULL;
 }
 

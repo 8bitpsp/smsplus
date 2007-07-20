@@ -49,6 +49,7 @@ typedef struct
   int Frameskip;
   int VertStrip;
   int SoundEngine;
+  int SoundBoost;
 } EmulatorOptions;
 
 struct ButtonConfig

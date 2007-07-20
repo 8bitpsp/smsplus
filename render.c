@@ -278,6 +278,12 @@ void render_line(int line)
     if(line >= vdp.height)
         return;
 
+	if((line < bitmap.viewport.y) ||
+	   (line > (bitmap.viewport.y + bitmap.viewport.h)))
+	{
+		return;
+	}
+
     /* Point to current line in output buffer */
     linebuf = (bitmap.depth == 8) ? &bitmap.data[(line * bitmap.pitch)] : &internal_buffer[0];
 
@@ -545,6 +551,8 @@ void update_bg_pattern_cache(void)
     int i;
     uint8 x, y;
     uint16 name;
+	int yLookup1;
+	int yLookup2;
 
     if(!bg_list_index) return;
 
@@ -555,6 +563,9 @@ void update_bg_pattern_cache(void)
 
         for(y = 0; y < 8; y++)
         {
+			yLookup1 = y << 3;
+			yLookup2 = (y ^ 7) << 3;
+
             if(bg_name_dirty[name] & (1 << y))
             {
                 uint8 *dst = &bg_pattern_cache[name << 6];
@@ -566,10 +577,10 @@ void update_bg_pattern_cache(void)
                 for(x = 0; x < 8; x++)
                 {
                     uint8 c = (temp >> (x << 2)) & 0x0F;
-                    dst[0x00000 | (y << 3) | (x)] = (c);
-                    dst[0x08000 | (y << 3) | (x ^ 7)] = (c);
-                    dst[0x10000 | ((y ^ 7) << 3) | (x)] = (c);
-                    dst[0x18000 | ((y ^ 7) << 3) | (x ^ 7)] = (c);
+                    dst[0x00000 | yLookup1 | (x)] = (c);
+                    dst[0x08000 | yLookup1 | (x ^ 7)] = (c);
+                    dst[0x10000 | yLookup2 | (x)] = (c);
+                    dst[0x18000 | yLookup2 | (x ^ 7)] = (c);
                 }
             }
         }
@@ -577,7 +588,6 @@ void update_bg_pattern_cache(void)
     }
     bg_list_index = 0;
 }
-
 
 /* Update a palette entry */
 void palette_sync(int index)
@@ -611,7 +621,7 @@ void palette_sync(int index)
     bitmap.pal.color[index][1] = g;
     bitmap.pal.color[index][2] = b;
 
-    pixel[index] = MAKE_PIXEL(r, g, b);
+    pixel[index] = MAKE_PIXEL(r,g,b);
 
     bitmap.pal.dirty[index] = bitmap.pal.update = 1;
 }
