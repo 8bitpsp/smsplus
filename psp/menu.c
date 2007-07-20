@@ -1190,7 +1190,7 @@ PspImage* LoadStateIcon(const char *path)
   if (!f) return NULL;
 
   /* Load image */
-  PspImage *image = pspImageLoadPngOpen(f);
+  PspImage *image = pspImageLoadPngFd(f);
   fclose(f);
 
   return image;
@@ -1204,7 +1204,7 @@ int LoadState(const char *path)
   if (!f) return 0;
 
   /* Load image into temporary object */
-  PspImage *image = pspImageLoadPngOpen(f);
+  PspImage *image = pspImageLoadPngFd(f);
   pspImageDestroy(image);
 
   system_load_state(f);
@@ -1228,7 +1228,7 @@ PspImage* SaveState(const char *path, PspImage *icon)
   if (!thumb) { fclose(f); return NULL; }
 
   /* Write the thumbnail */
-  if (!pspImageSavePngOpen(f, thumb))
+  if (!pspImageSavePngFd(f, thumb))
   {
     pspImageDestroy(thumb);
     fclose(f);

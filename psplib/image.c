@@ -71,44 +71,12 @@ PspImage* pspImageCreate(int width, int height, int bpp)
   return image;
 }
 
-/*
-PspImage* pspImageCreate(int width, int height)
-{
-  int size = width * height * sizeof(unsigned short);
-  unsigned short* pixels = (unsigned short*)memalign(16, size);
-
-  if (!pixels) return NULL;
-
-  PspImage *image = (PspImage*)malloc(sizeof(PspImage));
-
-  if (!image)
-  {
-    free(pixels);
-    return NULL;
-  }
-
-  memset(pixels, 0, size);
-
-  image->Width = width;
-  image->Height = height;
-  image->Pixels = pixels;
-
-  image->Viewport.X = 0;
-  image->Viewport.Y = 0;
-  image->Viewport.Width = width;
-  image->Viewport.Height = height;
-  image->FreeBuffer = 1;
-
-  return image;
-}
-*/
-
 /* Creates an image using portion of VRAM */
 PspImage* pspImageCreateVram(int width, int height, int bpp)
 {
   if (bpp != PSP_IMAGE_INDEXED && bpp != PSP_IMAGE_16BPP) return NULL;
 
-  int size = width * height * (bpp / 8);
+  int i, size = width * height * (bpp / 8);
   void *pixels = pspVideoAllocateVramChunk(size);
 
   if (!pixels) return NULL;
@@ -127,22 +95,17 @@ PspImage* pspImageCreateVram(int width, int height, int bpp)
   image->Viewport.Width = width;
   image->Viewport.Height = height;
 
-  int i;
   for (i = 1; i < width; i *= 2);
   image->PowerOfTwo = (i == width);
-  image->BytesPerPixel = bpp / 8;
+  image->BytesPerPixel = bpp >> 3;
   image->FreeBuffer = 0;
   image->Depth = bpp;
   memset(image->Palette, 0, sizeof(image->Palette));
 
   switch (image->Depth)
   {
-  case PSP_IMAGE_INDEXED:
-    image->TextureFormat = GU_PSM_T8;
-    break;
-  case PSP_IMAGE_16BPP:
-    image->TextureFormat = GU_PSM_5551;
-    break;
+  case PSP_IMAGE_INDEXED: image->TextureFormat = GU_PSM_T8;   break;
+  case PSP_IMAGE_16BPP:   image->TextureFormat = GU_PSM_5551; break;
   }
 
   return image;
@@ -155,14 +118,14 @@ void pspImageDestroy(PspImage *image)
   free(image);
 }
 
-/* TODO: fix */
+/* Creates a half-sized thumbnail of an image */
 PspImage* pspImageCreateThumbnail(const PspImage *image)
 {
   PspImage *thumb;
   int i, j, p;
 
-  if (!(thumb = pspImageCreate(image->Viewport.Width / 2,
-    image->Viewport.Height / 2, image->Depth)))
+  if (!(thumb = pspImageCreate(image->Viewport.Width >> 1,
+    image->Viewport.Height >> 1, image->Depth)))
       return NULL;
 
   int dy = image->Viewport.Y + image->Viewport.Height;
@@ -170,8 +133,16 @@ PspImage* pspImageCreateThumbnail(const PspImage *image)
 
   for (i = image->Viewport.Y, p = 0; i < dy; i += 2)
     for (j = image->Viewport.X; j < dx; j += 2)
-      ; //thumb->Pixels[p++] = image->Pixels[(image->Width * i) + j];
-/* AKTODO!!: implement */
+      if (image->Depth == PSP_IMAGE_INDEXED)
+        ((unsigned char*)thumb->Pixels)[p++]
+          = ((unsigned char*)image->Pixels)[(image->Width * i) + j];
+      else
+        ((unsigned short*)thumb->Pixels)[p++]
+          = ((unsigned short*)image->Pixels)[(image->Width * i) + j];
+
+  if (image->Depth == PSP_IMAGE_INDEXED)
+    memcpy(thumb->Palette, image->Palette, sizeof(image->Palette));
+
   return thumb;
 }
 
@@ -188,6 +159,7 @@ PspImage* pspImageCreateCopy(const PspImage *image)
   int size = image->Width * image->Height * image->BytesPerPixel;
   memcpy(copy->Pixels, image->Pixels, size);
   memcpy(&copy->Viewport, &image->Viewport, sizeof(PspViewport));
+  memcpy(copy->Palette, image->Palette, sizeof(image->Palette));
 
   return copy;
 }
@@ -195,9 +167,11 @@ PspImage* pspImageCreateCopy(const PspImage *image)
 /* Clears an image */
 void pspImageClear(PspImage *image, unsigned int color)
 {
-  if (image->BytesPerPixel == 1)
-    memset(image->Pixels, color, image->Width * image->Height);
-  else if (image->BytesPerPixel == 2)
+  if (image->Depth == PSP_IMAGE_INDEXED)
+  {
+    memset(image->Pixels, color & 0xff, image->Width * image->Height);
+  }
+  else if (image->Depth == PSP_IMAGE_16BPP)
   {
     int i;
     unsigned short *pixel = image->Pixels;
@@ -212,25 +186,26 @@ PspImage* pspImageLoadPng(const char *path)
   FILE *fp = fopen(path,"rb");
   if(!fp) return NULL;
 
-  PspImage *image = pspImageLoadPngOpen(fp);
+  PspImage *image = pspImageLoadPngFd(fp);
   fclose(fp);
 
   return image;
 }
 
+/* Saves an image to a file */
 int pspImageSavePng(const char *path, const PspImage* image)
 {
   FILE *fp = fopen( path, "wb" );
 	if (!fp) return 0;
 
-  int stat = pspImageSavePngOpen(fp, image);
+  int stat = pspImageSavePngFd(fp, image);
   fclose(fp);
 
   return stat;
 }
 
-/* Loads an image from an open file stream */
-PspImage* pspImageLoadPngOpen(FILE *fp)
+/* Loads an image from an open file descriptor (16-bit PNG)*/
+PspImage* pspImageLoadPngFd(FILE *fp)
 {
   const size_t nSigSize = 8;
   byte signature[nSigSize];
@@ -320,11 +295,10 @@ PspImage* pspImageLoadPngOpen(FILE *fp)
   return image;
 }
 
-/* TODO: fix */
-int pspImageSavePngOpen(FILE *fp, const PspImage* image)
+/* Saves an image to an open file descriptor (16-bit PNG)*/
+int pspImageSavePngFd(FILE *fp, const PspImage* image)
 {
   unsigned char *bitmap;
-  const unsigned short *pixel;
   int i, j, width, height;
 
   width = image->Viewport.Width;
@@ -333,19 +307,43 @@ int pspImageSavePngOpen(FILE *fp, const PspImage* image)
   if (!(bitmap = (u8*)malloc(sizeof(u8) * width * height * 3)))
     return 0;
 
-  pixel = image->Pixels + (image->Viewport.Y * image->Width);
-  for (i = 0; i < height; i++)
+  if (image->Depth == PSP_IMAGE_INDEXED)
   {
-    /* Skip to the start of the viewport */
-    pixel += image->Viewport.X;
-    for (j = 0; j < width; j++, pixel++)
+    const unsigned char *pixel;
+    pixel = image->Pixels + (image->Viewport.Y * image->Width);
+
+    for (i = 0; i < height; i++)
     {
-      bitmap[i * width * 3 + j * 3 + 0] = RED(*pixel);
-      bitmap[i * width * 3 + j * 3 + 1] = GREEN(*pixel);
-      bitmap[i * width * 3 + j * 3 + 2] = BLUE(*pixel);
+      /* Skip to the start of the viewport */
+      pixel += image->Viewport.X;
+      for (j = 0; j < width; j++, pixel++)
+      {
+        bitmap[i * width * 3 + j * 3 + 0] = RED(image->Palette[*pixel]);
+        bitmap[i * width * 3 + j * 3 + 1] = GREEN(image->Palette[*pixel]);
+        bitmap[i * width * 3 + j * 3 + 2] = BLUE(image->Palette[*pixel]);
+      }
+      /* Skip to the end of the line */
+      pixel += image->Width - (image->Viewport.X + width);
     }
-    /* Skip to the end of the line */
-    pixel += image->Width - (image->Viewport.X + width);
+  }
+  else
+  {
+    const unsigned short *pixel;
+    pixel = image->Pixels + (image->Viewport.Y * image->Width);
+
+    for (i = 0; i < height; i++)
+    {
+      /* Skip to the start of the viewport */
+      pixel += image->Viewport.X;
+      for (j = 0; j < width; j++, pixel++)
+      {
+        bitmap[i * width * 3 + j * 3 + 0] = RED(*pixel);
+        bitmap[i * width * 3 + j * 3 + 1] = GREEN(*pixel);
+        bitmap[i * width * 3 + j * 3 + 2] = BLUE(*pixel);
+      }
+      /* Skip to the end of the line */
+      pixel += image->Width - (image->Viewport.X + width);
+    }
   }
 
   png_struct *pPngStruct = png_create_write_struct( PNG_LIBPNG_VER_STRING,

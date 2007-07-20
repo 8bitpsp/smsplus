@@ -54,8 +54,8 @@ void      pspImageClear(PspImage *image, unsigned int color);
 
 PspImage* pspImageLoadPng(const char *path);
 int       pspImageSavePng(const char *path, const PspImage* image);
-PspImage* pspImageLoadPngOpen(FILE *fp);
-int       pspImageSavePngOpen(FILE *fp, const PspImage* image);
+PspImage* pspImageLoadPngFd(FILE *fp);
+int       pspImageSavePngFd(FILE *fp, const PspImage* image);
 
 #ifdef __cplusplus
 }
