@@ -110,11 +110,11 @@ void RunEmulator()
     break;
   case DISPLAY_MODE_FIT_HEIGHT:
     ratio = (float)SCR_HEIGHT / (float)Screen->Viewport.Height;
-    ScreenW = (float)Screen->Viewport.Width * ratio;
+    ScreenW = (float)Screen->Viewport.Width * ratio - 2;
     ScreenH = SCR_HEIGHT;
     break;
   case DISPLAY_MODE_FILL_SCREEN:
-    ScreenW = SCR_WIDTH;
+    ScreenW = SCR_WIDTH - 3;
     ScreenH = SCR_HEIGHT;
     break;
   }

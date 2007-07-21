@@ -121,7 +121,7 @@ void pspVideoInit()
 void* GetBuffer(const PspImage *image)
 {
   int i, j, w, h;
-  static int last_w = -1, last_h = -1, last_d = -1;
+  static int last_w = -1, last_h = -1;
   int x_offset, x_skip, x_buf_skip;
 
   w = (image->Viewport.Width > BUF_WIDTH)
@@ -138,8 +138,7 @@ void* GetBuffer(const PspImage *image)
 
   if (image->Depth == PSP_IMAGE_INDEXED)
   {
-    unsigned char *img_ptr = image->Pixels
-      + image->Viewport.Y * image->BytesPerPixel;
+    unsigned char *img_ptr = &((unsigned char*)image->Pixels)[image->Viewport.Y * image->Width];
     unsigned char *buf_ptr = ScratchBuffer;
 
     for (i = 0; i < h; i++)
@@ -153,8 +152,7 @@ void* GetBuffer(const PspImage *image)
   }
   else if (image->Depth == PSP_IMAGE_16BPP)
   {
-    unsigned short *img_ptr = image->Pixels
-      + image->Viewport.Y * image->BytesPerPixel;
+    unsigned short *img_ptr = &((unsigned short*)image->Pixels)[image->Viewport.Y * image->Width];
     unsigned short *buf_ptr = ScratchBuffer;
 
     for (i = 0; i < h; i++)
@@ -169,7 +167,6 @@ void* GetBuffer(const PspImage *image)
 
   last_w = w;
   last_h = h;
-  last_d = image->Depth;
 
   sceKernelDcacheWritebackAll();
 
@@ -189,7 +186,7 @@ void pspVideoEnd()
 
 void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
 {
-  sceGuScissor(dx + 1, dy + 1, dx + dw - 2, dy + dh - 2);
+  sceGuScissor(dx, dy, dx + dw, dy + dh);
 
   void *pixels;
   int width;

@@ -59,13 +59,8 @@ $(PSPLIB)/video.o:  $(PSPLIB)/video.c $(PSPLIB)/video.h \
                     $(PSPLIB)/font.c $(PSPLIB)/image.c
 $(PSPLIB)/util.o:   $(PSPLIB)/util.c $(PSPLIB)/util.h \
                     $(PSPLIB)/video.c $(PSPLIB)/fileio.c \
-										$(PSPLIB)/image.c
+                    $(PSPLIB)/image.c
 $(PSPLIB)/stockfont.h: $(DATA)/genfont $(PSPLIB)/stockfont.fd
 	$< < $(word 2,$^) > $@
 $(DATA)/genfont: $(PSPLIB)/genfont.c
 	cc $< -o $@
-
-copy: kxploit
-	cp smsppsp/EBOOT.PBP /media/disk/PSP/GAME/__SCE__smsppsp/eboot.pbp
-	cp smsppsp%/EBOOT.PBP /media/disk/PSP/GAME/%__SCE__smsppsp/eboot.pbp
-	sync
