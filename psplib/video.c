@@ -60,7 +60,7 @@ static unsigned int VramBufferOffset;
 static unsigned int __attribute__((aligned(16))) List[262144]; /* TODO: ? */
 
 static void* GetBuffer(const PspImage *image);
-int _pspVideoPutChar(const PspFont *font, int sx, int sy, unsigned char sym, int color);
+static inline int PutChar(const PspFont *font, int sx, int sy, unsigned char sym, int color);
 
 void pspVideoInit()
 {
@@ -345,7 +345,7 @@ void pspVideoClearScreen()
   sceGuClear(GU_COLOR_BUFFER_BIT);
 }
 
-int _pspVideoPutChar(const PspFont *font, int sx, int sy, unsigned char sym, int color)
+inline int PutChar(const PspFont *font, int sx, int sy, unsigned char sym, int color)
 {
   /* Instead of a tab, skip 4 spaces */
   if (sym == (u8)'\t')
@@ -357,22 +357,46 @@ int _pspVideoPutChar(const PspFont *font, int sx, int sy, unsigned char sym, int
   h = font->Height;
 
   /* Allocate and clear enough memory to write the pixels of the char */
-  s = sizeof(PspVertex) * w * h;
+  s = sizeof(PspVertex) * (w + 2) * (h + 2);
   PspVertex *vert = (PspVertex*)sceGuGetMemory(s);
   memset(vert, 0, s);
 
+  unsigned short row;
+  int shift;
+
+  v = 0;
+  for (j = 0; j < w; j++)
+    if (font->Chars[(int)sym].Char[0] & (1 << (w - j)))
+    { vert[v].x = sx + j; vert[v].y = sy - 1; vert[v].color = 0xff000000; v++; }
+
   /* Initialize pixel values */
-  for (i = 0, v = 0; i < h; i++)
+  for (i = 0; i < h; i++)
   {
     for (j = 0; j < w; j++)
     {
-      if (font->Chars[(int)sym].Char[i] & (0x1 << (w-j)))
+      row = font->Chars[(int)sym].Char[i];
+      shift = w - j;
+
+      if (row & (1 << shift))
       {
-        vert[v].x = sx + j; vert[v].y = sy + i; vert[v].color = color;
-        v++;
+        if (j == 0 || !(row & (1 << (shift + 1))))
+        { vert[v].x = sx + j - 1; vert[v].y = sy + i; vert[v].color = 0xff000000; v++; }
+        vert[v].x = sx + j; vert[v].y = sy + i; vert[v].color = color; v++;
+        vert[v].x = sx + j + 1; vert[v].y = sy + i; vert[v].color = 0xff000000; v++;
+      }
+      else if (i > 0 && i < h - 1)
+      {
+        if ((i > 0) && (font->Chars[(int)sym].Char[i - 1] & (1 << shift)))
+        { vert[v].x = sx + j; vert[v].y = sy + i; vert[v].color = 0xff000000; v++; }
+        else if ((i < h - 1) && (font->Chars[(int)sym].Char[i + 1] & (1 << shift)))
+        { vert[v].x = sx + j; vert[v].y = sy + i; vert[v].color = 0xff000000; v++; }
       }
     }
   }
+
+  for (j = 0; j < w; j++)
+    if (font->Chars[(int)sym].Char[h - 1] & (1 << (w - j)))
+    { vert[v].x = sx + j; vert[v].y = sy + h; vert[v].color = 0xff000000; v++; }
 
   /* Render the char as a set of pixels */
   sceGuDrawArray(GU_POINTS, GU_COLOR_8888 | GU_VERTEX_16BIT | GU_TRANSFORM_2D, v, NULL, vert);
@@ -411,7 +435,7 @@ int pspVideoPrintCenter(const PspFont *font, int sx, int sy, int dx, const char 
       }
     }
 
-    width += _pspVideoPutChar(font, sx + width, sy, (u8)(*ch), c);
+    width += PutChar(font, sx + width, sy, (u8)(*ch), c);
     if (width > max) max = width;
   }
 
@@ -440,7 +464,7 @@ int pspVideoPrintN(const PspFont *font, int sx, int sy, const char *string, int 
       }
     }
 
-    width += _pspVideoPutChar(font, sx + width, sy, (u8)(*ch), c);
+    width += PutChar(font, sx + width, sy, (u8)(*ch), c);
     if (width > max) max = width;
   }
 
