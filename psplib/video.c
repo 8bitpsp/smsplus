@@ -30,14 +30,14 @@
 const unsigned int PspFontColor[] = 
 {
   0, /* Restore */
-  PSP_VIDEO_BLACK,
-  PSP_VIDEO_RED,
-  PSP_VIDEO_GREEN,
-  PSP_VIDEO_BLUE,
-  PSP_VIDEO_GRAY,
-  PSP_VIDEO_YELLOW,
-  PSP_VIDEO_MAGENTA,
-  PSP_VIDEO_WHITE
+  PSP_COLOR_BLACK,
+  PSP_COLOR_RED,
+  PSP_COLOR_GREEN,
+  PSP_COLOR_BLUE,
+  PSP_COLOR_GRAY,
+  PSP_COLOR_YELLOW,
+  PSP_COLOR_MAGENTA,
+  PSP_COLOR_WHITE
 };
 
 struct TexVertex
@@ -53,9 +53,9 @@ static int   PixelFormat;
 static int   TexColor;
 static void *VramOffset;
 static void *VramChunkOffset;
-//static unsigned short __attribute__((aligned(16))) ScratchBuffer[BUF_WIDTH * SCR_HEIGHT];
-static void *ScratchBuffer;
-static int ScratchBufferSize;
+static unsigned short __attribute__((aligned(16))) ScratchBuffer[BUF_WIDTH * SCR_HEIGHT];
+//static void *ScratchBuffer;
+//static int ScratchBufferSize;
 static unsigned int VramBufferOffset;
 static unsigned int __attribute__((aligned(16))) List[262144]; /* TODO: ? */
 
@@ -69,25 +69,22 @@ void pspVideoInit()
   VramBufferOffset = 0;
   VramOffset = 0;
   VramChunkOffset = (void*)0x44088000;
-  ScratchBufferSize = sizeof(unsigned short) * BUF_WIDTH * SCR_HEIGHT;
-  ScratchBuffer = memalign(16, ScratchBufferSize);
+//  ScratchBufferSize = sizeof(unsigned short) * BUF_WIDTH * SCR_HEIGHT;
+//  ScratchBuffer = pspVideoAllocateVramChunk(ScratchBufferSize); //;memalign(16, ScratchBufferSize);
 
   int size;
 
-  // Initialize draw buffer
-
+  /* Initialize draw buffer */
   size = 2 * BUF_WIDTH * SCR_HEIGHT;
   DrawBuffer = (void*)VramBufferOffset;
   VramBufferOffset += size;
 
-  // Initialize display buffer
-
+  /* Initialize display buffer */
   size = 4 * BUF_WIDTH * SCR_HEIGHT;
   DisplayBuffer = (void*)VramBufferOffset;
   VramBufferOffset += size;
 
-  // Initialize depth buffer
-
+  /* Initialize depth buffer */
   size = 2 * BUF_WIDTH * SCR_HEIGHT;
   void *depth_buf = (void*)VramBufferOffset;
   VramBufferOffset += size;
@@ -130,7 +127,7 @@ void* GetBuffer(const PspImage *image)
     ? SCR_HEIGHT : image->Viewport.Height;
 
   if (w != last_w || h != last_h)
-    memset(ScratchBuffer, 0, ScratchBufferSize);
+    memset(ScratchBuffer, 0, sizeof(ScratchBuffer));
 
   x_offset = image->Viewport.X;
   x_skip = image->Width - (image->Viewport.X + image->Viewport.Width);
@@ -139,7 +136,7 @@ void* GetBuffer(const PspImage *image)
   if (image->Depth == PSP_IMAGE_INDEXED)
   {
     unsigned char *img_ptr = &((unsigned char*)image->Pixels)[image->Viewport.Y * image->Width];
-    unsigned char *buf_ptr = ScratchBuffer;
+    unsigned char *buf_ptr = (unsigned char*)ScratchBuffer;
 
     for (i = 0; i < h; i++)
     {
@@ -214,15 +211,18 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
   else
   {
     sceGuEnable(GU_TEXTURE_2D);
+
     if (image->Depth == PSP_IMAGE_INDEXED)
     {
       sceGuClutMode(PixelFormat, 0, 0xff, 0);
       sceGuClutLoad(256 >> 3, image->Palette);
     }
+
     sceGuTexMode(image->TextureFormat, 0, 0, GU_FALSE);
     sceGuTexImage(0, width, width, width, pixels);
     sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
     sceGuTexFilter(GU_LINEAR, GU_LINEAR);
+
     struct TexVertex* vertices;
     int start, end, sc_end, slsz_scaled;
     slsz_scaled = ceil((float)dw * (float)SLICE_SIZE) / (float)image->Viewport.Width;
@@ -252,6 +252,7 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
         GU_TEXTURE_16BIT | TexColor | GU_VERTEX_16BIT | GU_TRANSFORM_2D,
         2, 0, vertices);
     }
+
     sceGuDisable(GU_TEXTURE_2D);
   }
 
@@ -265,7 +266,6 @@ void pspVideoSwapBuffers()
 
 void pspVideoShutdown()
 {
-  free(ScratchBuffer);
   sceGuTerm();
 }
 
@@ -422,9 +422,9 @@ int pspVideoPrintCenter(const PspFont *font, int sx, int sy, int dx, const char 
   {
     if (*ch < 32)
     {
-      if (*ch >= PSP_VIDEO_FC_RESTORE && *ch <= PSP_VIDEO_FC_WHITE)
+      if (*ch >= PSP_FONT_RESTORE && *ch <= PSP_FONT_WHITE)
       {
-        c = (*ch == PSP_VIDEO_FC_RESTORE) ? color : PspFontColor[(int)(*ch) - PSP_VIDEO_FC_RESTORE];
+        c = (*ch == PSP_FONT_RESTORE) ? color : PspFontColor[(int)(*ch) - PSP_FONT_RESTORE];
         continue;
       }
       else if (*ch == '\n')
@@ -451,9 +451,9 @@ int pspVideoPrintN(const PspFont *font, int sx, int sy, const char *string, int 
   {
     if (*ch < 32)
     {
-      if (*ch >= PSP_VIDEO_FC_RESTORE && *ch <= PSP_VIDEO_FC_WHITE)
+      if (*ch >= PSP_FONT_RESTORE && *ch <= PSP_FONT_WHITE)
       {
-        c = (*ch == PSP_VIDEO_FC_RESTORE) ? color : PspFontColor[(int)(*ch) - PSP_VIDEO_FC_RESTORE];
+        c = (*ch == PSP_FONT_RESTORE) ? color : PspFontColor[(int)(*ch) - PSP_FONT_RESTORE];
         continue;
       }
       else if (*ch == '\n')

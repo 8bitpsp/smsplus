@@ -22,25 +22,15 @@
 extern "C" {
 #endif
 
-#define PSP_VIDEO_WHITE	   (u32)0xffffffff
-#define PSP_VIDEO_BLACK	   (u32)0xff000000
-#define PSP_VIDEO_GRAY	   (u32)0xffcccccc
-#define PSP_VIDEO_DARKGRAY (u32)0xff777777
-#define PSP_VIDEO_RED	     (u32)0xff0000ff
-#define PSP_VIDEO_GREEN	   (u32)0xff00ff00
-#define PSP_VIDEO_BLUE	   (u32)0xffff0000
-#define PSP_VIDEO_YELLOW   (u32)0xff00ffff
-#define PSP_VIDEO_MAGENTA  (u32)0xffff00ff
-
-#define PSP_VIDEO_FC_RESTORE 020
-#define PSP_VIDEO_FC_BLACK   021
-#define PSP_VIDEO_FC_RED     022
-#define PSP_VIDEO_FC_GREEN   023
-#define PSP_VIDEO_FC_BLUE    024
-#define PSP_VIDEO_FC_GRAY    025
-#define PSP_VIDEO_FC_YELLOW  026
-#define PSP_VIDEO_FC_MAGENTA 027
-#define PSP_VIDEO_FC_WHITE   030
+#define PSP_COLOR_WHITE	   (u32)0xffffffff
+#define PSP_COLOR_BLACK	   (u32)0xff000000
+#define PSP_COLOR_GRAY	   (u32)0xffcccccc
+#define PSP_COLOR_DARKGRAY (u32)0xff777777
+#define PSP_COLOR_RED	     (u32)0xff0000ff
+#define PSP_COLOR_GREEN	   (u32)0xff00ff00
+#define PSP_COLOR_BLUE	   (u32)0xffff0000
+#define PSP_COLOR_YELLOW   (u32)0xff00ffff
+#define PSP_COLOR_MAGENTA  (u32)0xffff00ff
 
 #define PSP_VIDEO_UNSCALED    0
 #define PSP_VIDEO_FIT_HEIGHT  1

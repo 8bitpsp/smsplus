@@ -27,7 +27,7 @@
 #define PSP_KYBD_THRESHOLD 50
 
 #define PSP_KYBD_BUTTON_BG        COLOR(0, 0, 0, 0x88)
-#define PSP_KYBD_BUTTON_BORDER    PSP_VIDEO_WHITE
+#define PSP_KYBD_BUTTON_BORDER    PSP_COLOR_WHITE
 #define PSP_KYBD_FONT_COLOR       COLOR(0xFF, 0xFF, 0xFF, 0xFF)
 #define PSP_KYBD_STUCK_COLOR      COLOR(0xFF, 0, 0, 0x33)
 #define PSP_KYBD_SELECTED_COLOR   COLOR(0xFF, 0xFF, 0, 0x88)
@@ -332,7 +332,7 @@ void _pspKybdRenderKeyboard(PspKeyboardLayout *layout)
   off_x = SCR_WIDTH / 2 - txt_w / 2;
   off_y = SCR_HEIGHT - fh;
   pspVideoFillRect(off_x, off_y, off_x + txt_w, off_y + fh,PSP_KYBD_BUTTON_BG);
-  pspVideoPrint(&PspStockFont, off_x, off_y, buttons, PSP_VIDEO_WHITE);
+  pspVideoPrint(&PspStockFont, off_x, off_y, buttons, PSP_COLOR_WHITE);
 */
   sceGuFinish();
 }

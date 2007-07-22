@@ -34,6 +34,16 @@ extern "C" {
 #define PSP_FONT_SELECT    "\257\260"
 #define PSP_FONT_START     "\261\262"
 
+#define PSP_FONT_RESTORE 020
+#define PSP_FONT_BLACK   021
+#define PSP_FONT_RED     022
+#define PSP_FONT_GREEN   023
+#define PSP_FONT_BLUE    024
+#define PSP_FONT_GRAY    025
+#define PSP_FONT_YELLOW  026
+#define PSP_FONT_MAGENTA 027
+#define PSP_FONT_WHITE   030
+
 struct PspFont
 {
   unsigned char Height;

@@ -110,7 +110,6 @@ void pspUiAlert(const char *message)
   pspVideoEnd();
 
   /* Swap buffers */
-  sceKernelDcacheWritebackAll();
   pspVideoWaitVSync();
   pspVideoSwapBuffers();
 
@@ -158,7 +157,6 @@ int pspUiConfirm(const char *message)
   pspVideoEnd();
 
   /* Swap buffers */
-  sceKernelDcacheWritebackAll();
   pspVideoWaitVSync();
   pspVideoSwapBuffers();
 
@@ -203,7 +201,6 @@ void pspUiFlashMessage(const char *message)
   pspVideoEnd();
 
   /* Swap buffers */
-  sceKernelDcacheWritebackAll();
   pspVideoWaitVSync();
   pspVideoSwapBuffers();
 }
@@ -483,7 +480,6 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
       last_tick = current_tick;
 
       /* Swap buffers */
-      sceKernelDcacheWritebackAll();
       pspVideoWaitVSync();
       pspVideoSwapBuffers();
     }
@@ -740,7 +736,7 @@ void pspUiOpenGallery(const PspUiGallery *gallery, const char *title)
         }
         else 
         {
-          pspVideoShadowRect(j, i, j + icon_w, i + icon_h, PSP_VIDEO_BLACK, 3);
+          pspVideoShadowRect(j, i, j + icon_w, i + icon_h, PSP_COLOR_BLACK, 3);
           pspVideoDrawRect(j, i, j + icon_w, i + icon_h, UiMetric.TextColor);
         }
 
@@ -767,7 +763,6 @@ void pspUiOpenGallery(const PspUiGallery *gallery, const char *title)
     last_tick = current_tick;
 
     /* Swap buffers */
-    sceKernelDcacheWritebackAll();
     pspVideoWaitVSync();
     pspVideoSwapBuffers();
   }
@@ -1153,7 +1148,6 @@ void pspUiOpenMenu(const PspUiMenu *uimenu, const char *title)
     last_tick = current_tick;
 
     /* Swap buffers */
-    sceKernelDcacheWritebackAll();
     pspVideoWaitVSync();
     pspVideoSwapBuffers();
   }
@@ -1206,7 +1200,6 @@ void pspUiSplashScreen(PspUiSplash *splash)
     pspVideoEnd();
 
     /* Swap buffers */
-    sceKernelDcacheWritebackAll();
     pspVideoWaitVSync();
     pspVideoSwapBuffers();
   }
