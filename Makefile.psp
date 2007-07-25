@@ -1,66 +1,43 @@
 PSPSDK=$(shell psp-config --pspsdk-path)
 
-DATA=./data
-PSPLIB=./psplib
-SMSPPSP=./psp
+PSPLIB:=./psplib
+PSPAPP=./psp
 SOUND=./sound
 Z80=./cpu
+DATA=$(PSPAPP)/data
+
+PSP_APP_NAME=SMS Plus PSP
+PSP_APP_VER=1.2.4
 
 TARGET=smsppsp
 EXTRA_TARGETS=EBOOT.PBP
-PSP_EBOOT_TITLE=SMS Plus PSP 1.2.3
+PSP_EBOOT_TITLE=$(PSP_APP_NAME) $(PSP_APP_VER)
 PSP_EBOOT_ICON=$(DATA)/smsp-icon.png
 
-BUILD_Z80=$(Z80)/z80.o
-BUILD_SMS=sms.o	pio.o memz80.o render.o vdp.o \
-          system.o error.o fileio.o state.o loadrom.o
-BUILD_MINIZIP=unzip/ioapi.o unzip/unzip.o
-BUILD_SOUND=$(SOUND)/sound.o $(SOUND)/sn76489.o $(SOUND)/emu2413.o \
-            $(SOUND)/ym2413.o $(SOUND)/fmintf.o $(SOUND)/stream.o
 BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
              $(PSPLIB)/video.o $(PSPLIB)/audio.o $(PSPLIB)/fileio.o \
              $(PSPLIB)/menu.o $(PSPLIB)/ui.o $(PSPLIB)/ctrl.o \
              $(PSPLIB)/kybd.o $(PSPLIB)/perf.o $(PSPLIB)/util.o \
              $(PSPLIB)/init.o
-BUILD_SMSPLUS=$(SMSPPSP)/emumain.o $(SMSPPSP)/menu.o $(SMSPPSP)/main.o
+BUILD_Z80=$(Z80)/z80.o
+BUILD_APP=sms.o	pio.o memz80.o render.o vdp.o \
+          system.o error.o fileio.o state.o loadrom.o
+BUILD_MINIZIP=unzip/ioapi.o unzip/unzip.o
+BUILD_SOUND=$(SOUND)/sound.o $(SOUND)/sn76489.o $(SOUND)/emu2413.o \
+            $(SOUND)/ym2413.o $(SOUND)/fmintf.o $(SOUND)/stream.o
+BUILD_PSPAPP=$(PSPAPP)/emumain.o $(PSPAPP)/menu.o $(PSPAPP)/main.o
 
 OBJS=$(BUILD_PSPLIB) $(BUILD_SOUND) $(BUILD_Z80) $(BUILD_MINIZIP) \
-     $(BUILD_SMS) $(BUILD_SMSPLUS)
+     $(BUILD_APP) $(BUILD_PSPAPP)
 
-CFLAGS=-O2 -G0 -Wall -DPSP -DLSB_FIRST -DALIGN_DWORD
+DEFINES=-DLSB_FIRST -DALIGN_DWORD
+BASE_DEFS=-DPSP -DPSP_APP_VER=\"$(PSP_APP_VER)\" -DPSP_APP_NAME="\"$(PSP_APP_NAME)\""
+CFLAGS=-O2 -G0 -Wall $(BASE_DEFS) $(DEFINES)
 CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS=$(CFLAGS)
 INCDIR=$(PSPLIB) ./cpu ./sound ./unzip
-LIBS=-lz -lm -lc -lpng -lpspgu -lpsppower -lpspaudio -lpsprtc
+LIBS=-lpng -lm -lc -lz -lpspgu -lpsppower -lpspaudio -lpsprtc
 
 include $(PSPSDK)/lib/build.mak
 
-#PSPLIB dependencies
-
-$(PSPLIB)/audio.o:  $(PSPLIB)/audio.c $(PSPLIB)/audio.h
-$(PSPLIB)/perf.o:   $(PSPLIB)/perf.c $(PSPLIB)/perf.h
-$(PSPLIB)/ctrl.o:   $(PSPLIB)/ctrl.c $(PSPLIB)/ctrl.h
-$(PSPLIB)/fileio.o: $(PSPLIB)/fileio.c $(PSPLIB)/fileio.h
-$(PSPLIB)/font.o:   $(PSPLIB)/font.c $(PSPLIB)/font.h \
-                    $(PSPLIB)/stockfont.h
-$(PSPLIB)/image.o:  $(PSPLIB)/image.c $(PSPLIB)/image.h
-$(PSPLIB)/kybd.o:   $(PSPLIB)/kybd.c $(PSPLIB)/kybd.h \
-                    $(PSPLIB)/ctrl.c $(PSPLIB)/video.c \
-                    $(PSPLIB)/image.c $(PSPLIB)/font.c
-$(PSPLIB)/menu.o:   $(PSPLIB)/menu.c $(PSPLIB)/menu.h
-$(PSPLIB)/init.o:   $(PSPLIB)/init.c $(PSPLIB)/init.h
-$(PSPLIB)/psp.o:    $(PSPLIB)/psp.c $(PSPLIB)/psp.h \
-                    $(PSPLIB)/fileio.c
-$(PSPLIB)/ui.o:     $(PSPLIB)/ui.c $(PSPLIB)/ui.h \
-                    $(PSPLIB)/video.c $(PSPLIB)/menu.c \
-                    $(PSPLIB)/psp.c $(PSPLIB)/fileio.c \
-                    $(PSPLIB)/ctrl.c
-$(PSPLIB)/video.o:  $(PSPLIB)/video.c $(PSPLIB)/video.h \
-                    $(PSPLIB)/font.c $(PSPLIB)/image.c
-$(PSPLIB)/util.o:   $(PSPLIB)/util.c $(PSPLIB)/util.h \
-                    $(PSPLIB)/video.c $(PSPLIB)/fileio.c \
-                    $(PSPLIB)/image.c
-$(PSPLIB)/stockfont.h: $(DATA)/genfont $(PSPLIB)/stockfont.fd
-	$< < $(word 2,$^) > $@
-$(DATA)/genfont: $(PSPLIB)/genfont.c
-	cc $< -o $@
+include $(PSPLIB)/build.mak

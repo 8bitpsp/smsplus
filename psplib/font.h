@@ -17,22 +17,26 @@
 extern "C" {
 #endif
 
-#define PSP_FONT_ANALUP    "\251"
-#define PSP_FONT_ANALDOWN  "\252"
-#define PSP_FONT_ANALLEFT  "\253"
-#define PSP_FONT_ANALRIGHT "\254"
-#define PSP_FONT_UP        "\245"
-#define PSP_FONT_DOWN      "\246"
-#define PSP_FONT_LEFT      "\247"
-#define PSP_FONT_RIGHT     "\250"
-#define PSP_FONT_SQUARE    "\244"
-#define PSP_FONT_CROSS     "\241"
-#define PSP_FONT_CIRCLE    "\242"
-#define PSP_FONT_TRIANGLE  "\243"
-#define PSP_FONT_LTRIGGER  "\255"
-#define PSP_FONT_RTRIGGER  "\256"
-#define PSP_FONT_SELECT    "\257\260"
-#define PSP_FONT_START     "\261\262"
+#define PSP_CHAR_ANALUP    "\251"
+#define PSP_CHAR_ANALDOWN  "\252"
+#define PSP_CHAR_ANALLEFT  "\253"
+#define PSP_CHAR_ANALRIGHT "\254"
+#define PSP_CHAR_UP        "\245"
+#define PSP_CHAR_DOWN      "\246"
+#define PSP_CHAR_LEFT      "\247"
+#define PSP_CHAR_RIGHT     "\250"
+#define PSP_CHAR_SQUARE    "\244"
+#define PSP_CHAR_CROSS     "\241"
+#define PSP_CHAR_CIRCLE    "\242"
+#define PSP_CHAR_TRIANGLE  "\243"
+#define PSP_CHAR_LTRIGGER  "\255"
+#define PSP_CHAR_RTRIGGER  "\256"
+#define PSP_CHAR_SELECT    "\257\260"
+#define PSP_CHAR_START     "\261\262"
+
+#define PSP_CHAR_POWER      "\267"
+#define PSP_CHAR_EMPTY_BATT "\266"
+#define PSP_CHAR_FULL_BATT  "\263"
 
 #define PSP_FONT_RESTORE 020
 #define PSP_FONT_BLACK   021

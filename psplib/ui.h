@@ -57,6 +57,7 @@ typedef struct PspUiMetric
 
   int TitlePadding;
   u32 TitleColor;
+  u32 TabBgColor;
 } PspUiMetric;
 
 typedef struct PspUiFileBrowser
@@ -112,6 +113,8 @@ void pspUiSplashScreen(PspUiSplash *splash);
 int  pspUiConfirm(const char *message);
 void pspUiAlert(const char *message);
 void pspUiFlashMessage(const char *message);
+
+void pspUiGetStatusString(char *status, int length);
 
 PspUiMetric UiMetric;
 

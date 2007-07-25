@@ -11,7 +11,7 @@
 
 #include "menu.h"
 
-PSP_MODULE_INFO("SMS Plus PSP", 0, 1, 1);
+PSP_MODULE_INFO(PSP_APP_NAME, 0, 1, 1);
 PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER);
 
 static void ExitCallback(void* arg)

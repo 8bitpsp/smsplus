@@ -205,42 +205,42 @@ static const PspMenuItemDef
     { NULL, NULL }
   },
   ControlMenuDef[] = {
-    { "\026"PSP_FONT_ANALUP,     (void*)MAP_ANALOG_UP,
+    { "\026"PSP_CHAR_ANALUP,     (void*)MAP_ANALOG_UP,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_ANALDOWN,   (void*)MAP_ANALOG_DOWN,
+    { "\026"PSP_CHAR_ANALDOWN,   (void*)MAP_ANALOG_DOWN,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_ANALLEFT,   (void*)MAP_ANALOG_LEFT,
+    { "\026"PSP_CHAR_ANALLEFT,   (void*)MAP_ANALOG_LEFT,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_ANALRIGHT,  (void*)MAP_ANALOG_RIGHT,
+    { "\026"PSP_CHAR_ANALRIGHT,  (void*)MAP_ANALOG_RIGHT,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_UP,         (void*)MAP_BUTTON_UP,
+    { "\026"PSP_CHAR_UP,         (void*)MAP_BUTTON_UP,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_DOWN,       (void*)MAP_BUTTON_DOWN,
+    { "\026"PSP_CHAR_DOWN,       (void*)MAP_BUTTON_DOWN,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_LEFT,       (void*)MAP_BUTTON_LEFT,
+    { "\026"PSP_CHAR_LEFT,       (void*)MAP_BUTTON_LEFT,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_RIGHT,      (void*)MAP_BUTTON_RIGHT,
+    { "\026"PSP_CHAR_RIGHT,      (void*)MAP_BUTTON_RIGHT,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_SQUARE,     (void*)MAP_BUTTON_SQUARE,
+    { "\026"PSP_CHAR_SQUARE,     (void*)MAP_BUTTON_SQUARE,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_CROSS,      (void*)MAP_BUTTON_CROSS,
+    { "\026"PSP_CHAR_CROSS,      (void*)MAP_BUTTON_CROSS,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_CIRCLE,     (void*)MAP_BUTTON_CIRCLE,
+    { "\026"PSP_CHAR_CIRCLE,     (void*)MAP_BUTTON_CIRCLE,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_TRIANGLE,   (void*)MAP_BUTTON_TRIANGLE,
+    { "\026"PSP_CHAR_TRIANGLE,   (void*)MAP_BUTTON_TRIANGLE,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_LTRIGGER,   (void*)MAP_BUTTON_LTRIGGER,
+    { "\026"PSP_CHAR_LTRIGGER,   (void*)MAP_BUTTON_LTRIGGER,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_RTRIGGER,   (void*)MAP_BUTTON_RTRIGGER,
+    { "\026"PSP_CHAR_RTRIGGER,   (void*)MAP_BUTTON_RTRIGGER,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_SELECT,     (void*)MAP_BUTTON_SELECT,
+    { "\026"PSP_CHAR_SELECT,     (void*)MAP_BUTTON_SELECT,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_START,      (void*)MAP_BUTTON_START,
+    { "\026"PSP_CHAR_START,      (void*)MAP_BUTTON_START,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_LTRIGGER"+"PSP_FONT_RTRIGGER,
+    { "\026"PSP_CHAR_LTRIGGER"+"PSP_CHAR_RTRIGGER,
                            (void*)MAP_BUTTON_LRTRIGGERS,
       ButtonMapOptions, -1, ControlHelpText },
-    { "\026"PSP_FONT_START"+"PSP_FONT_SELECT,
+    { "\026"PSP_CHAR_START"+"PSP_CHAR_SELECT,
                            (void*)MAP_BUTTON_STARTSELECT,
       ButtonMapOptions, -1, ControlHelpText },
     { NULL, NULL }
@@ -465,6 +465,7 @@ void InitMenu()
   UiMetric.TitlePadding = 4;
   UiMetric.TitleColor = PSP_COLOR_WHITE;
   UiMetric.MenuFps = 30;
+  UiMetric.TabBgColor = COLOR(0x74,0x74,0xbe,0xff);
 }
 
 void DisplayMenu()
@@ -565,7 +566,7 @@ void OnSplashRender(const void *splash, const void *null)
   int fh, i, x, y, height;
   const char *lines[] = 
   { 
-    "SMS Plus version 1.2.3 ("__DATE__")",
+    PSP_APP_NAME" version "PSP_APP_VER" ("__DATE__")",
     "\026http://psp.akop.org/smsplus",
     " ",
     "2007 Akop Karapetyan (port)",
@@ -598,39 +599,15 @@ int  OnSplashButtonPress(const struct PspUiSplash *splash,
 /* Handles drawing of generic items */
 void OnGenericRender(const void *uiobject, const void *item_obj)
 {
-  static int percentiles[] = { 60, 30, 12, 0 };
-  static char caption[32];
-  int percent_left, time_left, hr_left, min_left, i, width;
-  pspTime time;
-
-  time_left = pspGetBatteryTime();
-  sceRtcGetCurrentClockLocalTime(&time);
-  percent_left = pspGetBatteryPercent();
-  hr_left = time_left / 60;
-  min_left = time_left % 60;
-
-  /* Determine appropriate charge icon */
-  for (i = 0; i < 4; i++)
-    if (percent_left >= percentiles[i])
-      break;
-
-  /* Display PSP status (time, battery, etc..) */
-  sprintf(caption, "\270%2i/%2i %02i%c%02i %c%3i%% (%02i:%02i) ", 
-    time.month, time.day, 
-    time.hour, (time.microseconds > 500000) ? ':' : ' ', time.minutes, 
-    (percent_left > 6) 
-      ? 0263 + i 
-      : 0263 + i + (time.microseconds > 500000) ? 0 : 1, 
-    percent_left, 
-    (hr_left < 0) ? 0 : hr_left, (min_left < 0) ? 0 : min_left);
-
-  width = pspFontGetTextWidth(UiMetric.Font, caption);
-  pspVideoPrint(UiMetric.Font, SCR_WIDTH - width, 0, caption, PSP_COLOR_WHITE);
+  static char status[128];
+  pspUiGetStatusString(status, sizeof(status));
 
   /* Draw tabs */
   int height = pspFontGetLineHeight(UiMetric.Font);
-  int x;
+  int width = pspFontGetTextWidth(UiMetric.Font, status);
+  pspVideoPrint(UiMetric.Font, SCR_WIDTH - width, 0, status, PSP_COLOR_WHITE);
 
+  int i, x;
   for (i = 0, x = 5; i <= TAB_MAX; i++, x += width + 10)
   {
     width = -10;
@@ -643,7 +620,7 @@ void OnGenericRender(const void *uiobject, const void *item_obj)
 
     /* Draw background of active tab */
     if (i == TabIndex)
-      pspVideoFillRect(x - 5, 0, x + width + 5, height + 1, COLOR(0x74,0x74,0xbe,0xff));
+      pspVideoFillRect(x - 5, 0, x + width + 5, height + 1, UiMetric.TabBgColor);
 
     /* Draw name of tab */
     pspVideoPrint(UiMetric.Font, x, 0, TabLabel[i], PSP_COLOR_WHITE);

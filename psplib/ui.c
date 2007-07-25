@@ -15,6 +15,7 @@
 #include <string.h>
 #include <pspkernel.h>
 #include <psprtc.h>
+#include <psppower.h>
 
 #include "psp.h"
 #include "fileio.h"
@@ -68,10 +69,10 @@ char pspUiGetButtonIcon(u32 button_mask)
 {
   switch (button_mask)
   {
-  case PSP_CTRL_CROSS:    return *PSP_FONT_CROSS;
-  case PSP_CTRL_CIRCLE:   return *PSP_FONT_CIRCLE;
-  case PSP_CTRL_TRIANGLE: return *PSP_FONT_TRIANGLE;
-  case PSP_CTRL_SQUARE:   return *PSP_FONT_SQUARE;
+  case PSP_CTRL_CROSS:    return *PSP_CHAR_CROSS;
+  case PSP_CTRL_CIRCLE:   return *PSP_CHAR_CIRCLE;
+  case PSP_CTRL_TRIANGLE: return *PSP_CHAR_TRIANGLE;
+  case PSP_CTRL_SQUARE:   return *PSP_CHAR_SQUARE;
   default:                return '?';
   }
 }
@@ -1203,4 +1204,49 @@ void pspUiSplashScreen(PspUiSplash *splash)
     pspVideoWaitVSync();
     pspVideoSwapBuffers();
   }
+}
+
+/* Gets status string - containing current time and battery information */
+void pspUiGetStatusString(char *status, int length)
+{
+  static char main_str[128], batt_str[32];
+  pspTime time;
+
+  /* Get current time */
+  sceRtcGetCurrentClockLocalTime(&time);
+
+  /* Get the battery/power-related information */
+  if (scePowerIsBatteryExist())
+  {
+    /* If the battery's online, display charging stats */
+    int batt_time = scePowerGetBatteryLifeTime();
+    int batt_percent = scePowerGetBatteryLifePercent();
+    int i, charging = scePowerIsBatteryCharging();
+
+    static int percentiles[] = { 60, 30, 12, 0 };
+    for (i = 0; i < 4; i++)
+      if (batt_percent >= percentiles[i])
+        break;
+
+    /* Fix for when battery switches state from AC to batt */
+    batt_time = (batt_time >= 0) ? batt_time : 0;
+
+    sprintf(batt_str, "%c%3i%% (%02i:%02i)",
+      (charging) ? *PSP_CHAR_POWER : *PSP_CHAR_FULL_BATT + i,
+      batt_percent, batt_time / 60, batt_time % 60);
+  }
+  else
+  {
+    /* Otherwise, it must be on AC */
+    sprintf(batt_str, PSP_CHAR_POWER);
+  }
+
+  /* Write the rest of the string */
+  sprintf(main_str, "\270%2i/%2i %02i%c%02i %s ",
+    time.month, time.day,
+    time.hour, (time.microseconds > 500000) ? ':' : ' ', time.minutes,
+    batt_str);
+
+  strncpy(status, main_str, length);
+  status[length - 1] = '\0';
 }
