@@ -1,9 +1,9 @@
 PSPSDK=$(shell psp-config --pspsdk-path)
 
-PSPLIB:=./psplib
 PSPAPP=./psp
 SOUND=./sound
 Z80=./cpu
+PSPLIB=$(PSPAPP)/psplib
 DATA=$(PSPAPP)/data
 
 PSP_APP_NAME=SMS Plus PSP
