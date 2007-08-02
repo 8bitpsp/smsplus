@@ -472,7 +472,6 @@ void DisplayMenu()
 {
   int i;
   PspMenuItem *item;
-  ResumeEmulation = 0;
 
   /* Menu loop */
   do
