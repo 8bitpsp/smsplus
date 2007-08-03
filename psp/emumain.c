@@ -27,7 +27,7 @@ static u64 CurrentTick;
 static int Frame;
 
 extern char *GameName;
-extern EmulatorOptions SmsOptions;
+extern EmulatorOptions Options;
 extern const u64 ButtonMask[];
 extern const int ButtonMapId[];
 extern struct ButtonConfig ActiveConfig;
@@ -61,7 +61,7 @@ void InitEmulator()
   bitmap.viewport.h = 192;
 
   /* Initialize sound structure */
-  snd.fm_which = SmsOptions.SoundEngine;
+  snd.fm_which = Options.SoundEngine;
   snd.fps = FPS_NTSC;
   snd.fm_clock = CLOCK_NTSC;
   snd.psg_clock = CLOCK_NTSC;
@@ -91,7 +91,7 @@ void RunEmulator()
     bitmap.viewport.w = Screen->Viewport.Width = 256;
     bitmap.viewport.h = Screen->Viewport.Height = 192;
 
-    if (!SmsOptions.VertStrip)
+    if (!Options.VertStrip)
     {
       Screen->Viewport.X += 8;
       Screen->Viewport.Width -= 8;
@@ -101,7 +101,7 @@ void RunEmulator()
   pspImageClear(Screen, 0);
 
   /* Recompute screen size/position */
-  switch (SmsOptions.DisplayMode)
+  switch (Options.DisplayMode)
   {
   default:
   case DISPLAY_MODE_UNSCALED:
@@ -127,10 +127,10 @@ void RunEmulator()
 
   /* Recompute update frequency */
   TicksPerSecond = sceRtcGetTickResolution();
-  if (SmsOptions.UpdateFreq)
+  if (Options.UpdateFreq)
   {
     TicksPerUpdate = TicksPerSecond
-      / (SmsOptions.UpdateFreq / (SmsOptions.Frameskip + 1));
+      / (Options.UpdateFreq / (Options.Frameskip + 1));
     sceRtcGetCurrentTick(&LastTick);
   }
   Frame = 0;
@@ -149,7 +149,7 @@ void RunEmulator()
     if (ParseInput()) break;
 
     /* Run the system emulation for a frame */
-    if (++Frame <= SmsOptions.Frameskip)
+    if (++Frame <= Options.Frameskip)
     {
       /* Skip frame */
       system_frame(1);
@@ -277,7 +277,7 @@ void RenderVideo()
   pspVideoPutImage(Screen, ScreenX, ScreenY, ScreenW, ScreenH);
 
   /* Show FPS counter */
-  if (SmsOptions.ShowFps)
+  if (Options.ShowFps)
   {
     static char fps_display[32];
     sprintf(fps_display, " %3.02f", pspPerfGetFps(&FpsCounter));
@@ -292,7 +292,7 @@ void RenderVideo()
   pspVideoEnd();
 
   /* Wait if needed */
-  if (SmsOptions.UpdateFreq)
+  if (Options.UpdateFreq)
   {
     do { sceRtcGetCurrentTick(&CurrentTick); }
     while (CurrentTick - LastTick < TicksPerUpdate);
@@ -300,7 +300,7 @@ void RenderVideo()
   }
 
   /* Wait for VSync signal */
-  if (SmsOptions.VSync) pspVideoWaitVSync();
+  if (Options.VSync) pspVideoWaitVSync();
 
   /* Swap buffers */
   pspVideoSwapBuffers();
@@ -317,8 +317,8 @@ void MixerCallback(int16 **stream, int16 **output, int length)
   for(i = 0; i < length; i++)
   {
     int16 temp = (fm_buffer[0][i] + fm_buffer[1][i]) >> 1;
-    output[0][i] = (temp + psg_buffer[0][i]) << SmsOptions.SoundBoost;
-    output[1][i] = (temp + psg_buffer[1][i]) << SmsOptions.SoundBoost;
+    output[0][i] = (temp + psg_buffer[0][i]) << Options.SoundBoost;
+    output[1][i] = (temp + psg_buffer[1][i]) << Options.SoundBoost;
   }
 }
 

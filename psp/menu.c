@@ -48,7 +48,7 @@
 
 extern PspImage *Screen;
 
-EmulatorOptions SmsOptions;
+EmulatorOptions Options;
 
 static int TabIndex;
 static int ResumeEmulation;
@@ -441,8 +441,8 @@ void InitMenu()
   UiMetric.Top = 24;
   UiMetric.Right = 472;
   UiMetric.Bottom = 250;
-  UiMetric.OkButton = (!SmsOptions.ControlMode) ? PSP_CTRL_CROSS : PSP_CTRL_CIRCLE;
-  UiMetric.CancelButton = (!SmsOptions.ControlMode) ? PSP_CTRL_CIRCLE : PSP_CTRL_CROSS;
+  UiMetric.OkButton = (!Options.ControlMode) ? PSP_CTRL_CROSS : PSP_CTRL_CIRCLE;
+  UiMetric.CancelButton = (!Options.ControlMode) ? PSP_CTRL_CIRCLE : PSP_CTRL_CROSS;
   UiMetric.ScrollbarColor = PSP_COLOR_GRAY;
   UiMetric.ScrollbarBgColor = 0x44ffffff;
   UiMetric.ScrollbarWidth = 10;
@@ -501,38 +501,38 @@ void DisplayMenu()
     case TAB_SYSTEM:
       item = pspMenuFindItemByUserdata(SystemUiMenu.Menu,
         (void*)SYSTEM_VERT_STRIP);
-      pspMenuSelectOptionByValue(item, (void*)SmsOptions.VertStrip);
+      pspMenuSelectOptionByValue(item, (void*)Options.VertStrip);
       item = pspMenuFindItemByUserdata(SystemUiMenu.Menu,
         (void*)SYSTEM_SOUND_ENGINE);
-      pspMenuSelectOptionByValue(item, (void*)SmsOptions.SoundEngine);
+      pspMenuSelectOptionByValue(item, (void*)Options.SoundEngine);
       item = pspMenuFindItemByUserdata(SystemUiMenu.Menu,
         (void*)SYSTEM_SOUND_BOOST);
-      pspMenuSelectOptionByValue(item, (void*)SmsOptions.SoundBoost);
+      pspMenuSelectOptionByValue(item, (void*)Options.SoundBoost);
       pspUiOpenMenu(&SystemUiMenu, NULL);
       break;
     case TAB_OPTION:
       /* Init menu options */
       item = pspMenuFindItemByUserdata(OptionUiMenu.Menu,
         (void*)OPTION_DISPLAY_MODE);
-      pspMenuSelectOptionByValue(item, (void*)SmsOptions.DisplayMode);
+      pspMenuSelectOptionByValue(item, (void*)Options.DisplayMode);
       item = pspMenuFindItemByUserdata(OptionUiMenu.Menu,
         (void*)OPTION_SYNC_FREQ);
-      pspMenuSelectOptionByValue(item, (void*)SmsOptions.UpdateFreq);
+      pspMenuSelectOptionByValue(item, (void*)Options.UpdateFreq);
       item = pspMenuFindItemByUserdata(OptionUiMenu.Menu,
         (void*)OPTION_FRAMESKIP);
-      pspMenuSelectOptionByValue(item, (void*)(int)SmsOptions.Frameskip);
+      pspMenuSelectOptionByValue(item, (void*)(int)Options.Frameskip);
       item = pspMenuFindItemByUserdata(OptionUiMenu.Menu,
         (void*)OPTION_VSYNC);
-      pspMenuSelectOptionByValue(item, (void*)SmsOptions.VSync);
+      pspMenuSelectOptionByValue(item, (void*)Options.VSync);
       item = pspMenuFindItemByUserdata(OptionUiMenu.Menu,
         (void*)OPTION_CLOCK_FREQ);
-      pspMenuSelectOptionByValue(item, (void*)SmsOptions.ClockFreq);
+      pspMenuSelectOptionByValue(item, (void*)Options.ClockFreq);
       item = pspMenuFindItemByUserdata(OptionUiMenu.Menu,
         (void*)OPTION_SHOW_FPS);
-      pspMenuSelectOptionByValue(item, (void*)SmsOptions.ShowFps);
+      pspMenuSelectOptionByValue(item, (void*)Options.ShowFps);
       item = pspMenuFindItemByUserdata(OptionUiMenu.Menu,
         (void*)OPTION_CONTROL_MODE);
-      pspMenuSelectOptionByValue(item, (void*)SmsOptions.ControlMode);
+      pspMenuSelectOptionByValue(item, (void*)Options.ControlMode);
 
       pspUiOpenMenu(&OptionUiMenu, NULL);
       break;
@@ -544,7 +544,7 @@ void DisplayMenu()
     if (!ExitPSP)
     {
       /* Set clock frequency during emulation */
-      pspSetClockFrequency(SmsOptions.ClockFreq);
+      pspSetClockFrequency(Options.ClockFreq);
       /* Set buttons to normal mode */
       pspCtrlSetPollingMode(PSP_CTRL_NORMAL);
 
@@ -678,19 +678,19 @@ int  OnMenuItemChanged(const struct PspUiMenu *uimenu,
     switch((int)item->Userdata)
     {
     case SYSTEM_VERT_STRIP:
-      SmsOptions.VertStrip = (int)option->Value;
+      Options.VertStrip = (int)option->Value;
       break;
     case SYSTEM_SOUND_ENGINE:
-      if (SmsOptions.SoundEngine != (int)option->Value)
+      if (Options.SoundEngine != (int)option->Value)
       {
         pspUiFlashMessage("Initializing sound\nPlease wait...");
         sound_shutdown();
-        snd.fm_which = (SmsOptions.SoundEngine = (int)option->Value);
+        snd.fm_which = (Options.SoundEngine = (int)option->Value);
         sound_init();
       }
       break;
     case SYSTEM_SOUND_BOOST:
-      SmsOptions.SoundBoost = (int)option->Value;
+      Options.SoundBoost = (int)option->Value;
       break;
     }
   }
@@ -699,25 +699,25 @@ int  OnMenuItemChanged(const struct PspUiMenu *uimenu,
     switch((int)item->Userdata)
     {
     case OPTION_DISPLAY_MODE:
-      SmsOptions.DisplayMode = (int)option->Value;
+      Options.DisplayMode = (int)option->Value;
       break;
     case OPTION_SYNC_FREQ:
-      SmsOptions.UpdateFreq = (int)option->Value;
+      Options.UpdateFreq = (int)option->Value;
       break;
     case OPTION_FRAMESKIP:
-      SmsOptions.Frameskip = (int)option->Value;
+      Options.Frameskip = (int)option->Value;
       break;
     case OPTION_VSYNC:
-      SmsOptions.VSync = (int)option->Value;
+      Options.VSync = (int)option->Value;
       break;
     case OPTION_CLOCK_FREQ:
-      SmsOptions.ClockFreq = (int)option->Value;
+      Options.ClockFreq = (int)option->Value;
       break;
     case OPTION_SHOW_FPS:
-      SmsOptions.ShowFps = (int)option->Value;
+      Options.ShowFps = (int)option->Value;
       break;
     case OPTION_CONTROL_MODE:
-      SmsOptions.ControlMode = (int)option->Value;
+      Options.ControlMode = (int)option->Value;
       UiMetric.OkButton = (!(int)option->Value) ? PSP_CTRL_CROSS
         : PSP_CTRL_CIRCLE;
       UiMetric.CancelButton = (!(int)option->Value) ? PSP_CTRL_CIRCLE
@@ -1089,16 +1089,16 @@ void LoadOptions()
   else
   {
     /* Load values */
-    SmsOptions.DisplayMode = pspInitGetInt(init, "Video", "Display Mode", DISPLAY_MODE_UNSCALED);
-    SmsOptions.UpdateFreq = pspInitGetInt(init, "Video", "Update Frequency", 60);
-    SmsOptions.Frameskip = pspInitGetInt(init, "Video", "Frameskip", 1);
-    SmsOptions.VSync = pspInitGetInt(init, "Video", "VSync", 0);
-    SmsOptions.ClockFreq = pspInitGetInt(init, "Video", "PSP Clock Frequency", 222);
-    SmsOptions.ShowFps = pspInitGetInt(init, "Video", "Show FPS", 0);
-    SmsOptions.ControlMode = pspInitGetInt(init, "Menu", "Control Mode", 0);
-    SmsOptions.VertStrip = pspInitGetInt(init, "Game", "Vertical Strip", 1);
-    SmsOptions.SoundEngine = pspInitGetInt(init, "System", "FM Engine", SND_NULL);
-    SmsOptions.SoundBoost = pspInitGetInt(init, "System", "Sound Boost", 0);
+    Options.DisplayMode = pspInitGetInt(init, "Video", "Display Mode", DISPLAY_MODE_UNSCALED);
+    Options.UpdateFreq = pspInitGetInt(init, "Video", "Update Frequency", 60);
+    Options.Frameskip = pspInitGetInt(init, "Video", "Frameskip", 1);
+    Options.VSync = pspInitGetInt(init, "Video", "VSync", 0);
+    Options.ClockFreq = pspInitGetInt(init, "Video", "PSP Clock Frequency", 222);
+    Options.ShowFps = pspInitGetInt(init, "Video", "Show FPS", 0);
+    Options.ControlMode = pspInitGetInt(init, "Menu", "Control Mode", 0);
+    Options.VertStrip = pspInitGetInt(init, "Game", "Vertical Strip", 1);
+    Options.SoundEngine = pspInitGetInt(init, "System", "FM Engine", SND_NULL);
+    Options.SoundBoost = pspInitGetInt(init, "System", "Sound Boost", 0);
 
     if (GamePath) free(GamePath);
     GamePath = pspInitGetString(init, "File", "Game Path", NULL);
@@ -1119,16 +1119,16 @@ static int SaveOptions()
   PspInit *init = pspInitCreate();
 
   /* Set values */
-  pspInitSetInt(init, "Video", "Display Mode", SmsOptions.DisplayMode);
-  pspInitSetInt(init, "Video", "Update Frequency", SmsOptions.UpdateFreq);
-  pspInitSetInt(init, "Video", "Frameskip", SmsOptions.Frameskip);
-  pspInitSetInt(init, "Video", "VSync", SmsOptions.VSync);
-  pspInitSetInt(init, "Video", "PSP Clock Frequency",SmsOptions.ClockFreq);
-  pspInitSetInt(init, "Video", "Show FPS", SmsOptions.ShowFps);
-  pspInitSetInt(init, "Menu", "Control Mode", SmsOptions.ControlMode);
-  pspInitSetInt(init, "Game", "Vertical Strip", SmsOptions.VertStrip);
-  pspInitSetInt(init, "System", "FM Engine", SmsOptions.SoundEngine);
-  pspInitSetInt(init, "System", "Sound Boost", SmsOptions.SoundBoost);
+  pspInitSetInt(init, "Video", "Display Mode", Options.DisplayMode);
+  pspInitSetInt(init, "Video", "Update Frequency", Options.UpdateFreq);
+  pspInitSetInt(init, "Video", "Frameskip", Options.Frameskip);
+  pspInitSetInt(init, "Video", "VSync", Options.VSync);
+  pspInitSetInt(init, "Video", "PSP Clock Frequency",Options.ClockFreq);
+  pspInitSetInt(init, "Video", "Show FPS", Options.ShowFps);
+  pspInitSetInt(init, "Menu", "Control Mode", Options.ControlMode);
+  pspInitSetInt(init, "Game", "Vertical Strip", Options.VertStrip);
+  pspInitSetInt(init, "System", "FM Engine", Options.SoundEngine);
+  pspInitSetInt(init, "System", "Sound Boost", Options.SoundBoost);
 
   if (GamePath) pspInitSetString(init, "File", "Game Path", GamePath);
 
@@ -1145,16 +1145,16 @@ static int SaveOptions()
 /* Initialize options to system defaults */
 void InitOptionDefaults()
 {
-  SmsOptions.ControlMode = 0;
-  SmsOptions.DisplayMode = DISPLAY_MODE_UNSCALED;
-  SmsOptions.UpdateFreq = 60;
-  SmsOptions.Frameskip = 1;
-  SmsOptions.VSync = 0;
-  SmsOptions.ClockFreq = 222;
-  SmsOptions.ShowFps = 0;
-  SmsOptions.VertStrip = 1;
-  SmsOptions.SoundEngine = SND_NULL;
-  SmsOptions.SoundBoost = 0;
+  Options.ControlMode = 0;
+  Options.DisplayMode = DISPLAY_MODE_UNSCALED;
+  Options.UpdateFreq = 60;
+  Options.Frameskip = 1;
+  Options.VSync = 0;
+  Options.ClockFreq = 222;
+  Options.ShowFps = 0;
+  Options.VertStrip = 1;
+  Options.SoundEngine = SND_NULL;
+  Options.SoundBoost = 0;
   GamePath = NULL;
 }
 
