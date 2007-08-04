@@ -98,24 +98,24 @@ PspImage*   LoadStateIcon(const char *path);
 int         LoadState(const char *path);
 PspImage*   SaveState(const char *path, PspImage *icon);
 
-int OnMenuItemChanged(const struct PspUiMenu *uimenu,
-  PspMenuItem* item, const PspMenuOption* option);
-int OnMenuOk(const void *uimenu, const void* sel_item);
-int OnMenuButtonPress(const struct PspUiMenu *uimenu,
+static int OnMenuItemChanged(const struct PspUiMenu *uimenu, PspMenuItem* item, 
+  const PspMenuOption* option);
+static int OnMenuOk(const void *uimenu, const void* sel_item);
+static int OnMenuButtonPress(const struct PspUiMenu *uimenu, 
   PspMenuItem* sel_item, u32 button_mask);
 
-int OnSplashButtonPress(const struct PspUiSplash *splash, u32 button_mask);
-void OnSplashRender(const void *uiobject, const void *null);
-const char* OnSplashGetStatusBarText(const struct PspUiSplash *splash);
-
-int  OnGenericCancel(const void *uiobject, const void *param);
-void OnGenericRender(const void *uiobject, const void *item_obj);
-int  OnGenericButtonPress(const PspUiFileBrowser *browser, const char *path, 
+static int OnSplashButtonPress(const struct PspUiSplash *splash, 
   u32 button_mask);
+static void OnSplashRender(const void *uiobject, const void *null);
 
-int  OnSaveStateOk(const void *gallery, const void *item);
-int  OnSaveStateButtonPress(const PspUiGallery *gallery, PspMenuItem* item, 
-       u32 button_mask);
+static int OnGenericCancel(const void *uiobject, const void *param);
+static void OnGenericRender(const void *uiobject, const void *item_obj);
+static int OnGenericButtonPress(const PspUiFileBrowser *browser, 
+  const char *path, u32 button_mask);
+
+static int OnSaveStateOk(const void *gallery, const void *item);
+static int OnSaveStateButtonPress(const PspUiGallery *gallery, 
+  PspMenuItem* item, u32 button_mask);
 
 int OnQuickloadOk(const void *browser, const void *path);
 
@@ -946,8 +946,8 @@ int OnSaveStateButtonPress(const PspUiGallery *gallery,
 void OnSystemRender(const void *uiobject, const void *item_obj)
 {
   int w, h, x, y;
-  w = WIDTH / 2;
-  h = HEIGHT / 2;
+  w = Screen->Viewport.Width >> 1;
+  h = Screen->Viewport.Height >> 1;
   x = SCR_WIDTH - w - 8;
   y = SCR_HEIGHT - h - 80;
 
