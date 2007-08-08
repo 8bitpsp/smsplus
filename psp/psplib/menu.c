@@ -20,7 +20,7 @@ PspMenu* pspMenuCreate()
 {
   PspMenu* menu = (PspMenu*)malloc(sizeof(PspMenu));
 
-  menu->Count = NULL;
+  menu->Count = 0;
   menu->First = NULL;
   menu->Last = NULL;
   menu->Selected = NULL;
@@ -38,7 +38,7 @@ void pspMenuClear(PspMenu *menu)
     _pspMenuDestroyItem(item);
   }
 
-  menu->Count = NULL;
+  menu->Count = 0;
   menu->First = NULL;
   menu->Last = NULL;
   menu->Selected = NULL;
@@ -55,6 +55,10 @@ void pspMenuLoad(PspMenu *menu, const PspMenuItemDef *def)
   PspMenuItem *item;
   const PspMenuOptionDef *option_def;
 
+  /* If the menu is already loaded, clear it */
+  if (menu->First) pspMenuClear(menu);
+
+  /* Initialize menu */
   for (; def->Userdata || def->Caption; def++)
   {
     /* Append the item */
