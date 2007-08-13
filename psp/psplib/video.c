@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <psprtc.h>
 
 #include "video.h"
 
@@ -51,6 +52,7 @@ static void *DisplayBuffer;
 static void *DrawBuffer;
 static int   PixelFormat;
 static int   TexColor;
+static unsigned int  VBlankFreq;
 static void *VramOffset;
 static void *VramChunkOffset;
 static unsigned short __attribute__((aligned(16))) ScratchBuffer[BUF_WIDTH * SCR_HEIGHT];
@@ -111,6 +113,15 @@ void pspVideoInit()
   sceGuAmbientColor(0xffffffff);
   sceGuFinish();
   sceGuSync(0,0);
+
+  /* Compute VBlank frequency */
+  u64 t0, t1;
+  sceDisplayWaitVblankStart();
+  sceRtcGetCurrentTick(&t0);
+  sceDisplayWaitVblankStart();
+  sceRtcGetCurrentTick(&t1);
+  VBlankFreq = round(1.00 / ((double)(t1 - t0) 
+    * (1.00 / (double)sceRtcGetTickResolution())));
 
   sceGuDisplay(GU_TRUE);
 }
@@ -523,3 +534,9 @@ void* pspVideoAllocateVramChunk(unsigned int bytes)
 
   return ptr;
 }
+
+unsigned int pspVideoGetVSyncFreq()
+{
+  return VBlankFreq;
+}
+

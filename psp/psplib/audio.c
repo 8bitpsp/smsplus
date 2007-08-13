@@ -51,8 +51,8 @@ int pspAudioInit(int sample_count)
   {
     AudioStatus[i].Handle = -1;
     AudioStatus[i].ThreadHandle = -1;
-    AudioStatus[i].LeftVolume = PSP_VOLUME_MAX;
-    AudioStatus[i].RightVolume = PSP_VOLUME_MAX;
+    AudioStatus[i].LeftVolume = PSP_AUDIO_MAX_VOLUME;
+    AudioStatus[i].RightVolume = PSP_AUDIO_MAX_VOLUME;
     AudioStatus[i].Callback = NULL;
     AudioStatus[i].Userdata = NULL;
 
@@ -206,13 +206,8 @@ static int AudioChannelThread(int args, void *argp)
     bufptr = AudioBuffer[channel][bufidx];
     length = SampleCount;
 
-    if (callback)
-      callback(bufptr, &length, AudioStatus[channel].Userdata);
-    else
-    {
-      ptr = bufptr;
-      for (i = 0; i < SampleCount; i++) *(ptr++) = 0;
-    }
+    if (callback) callback(bufptr, &length, AudioStatus[channel].Userdata);
+    else for (i = 0, ptr = bufptr; i < SampleCount; i++) *(ptr++) = 0;
 
 	  OutputBlocking(channel, AudioStatus[channel].LeftVolume, 
       AudioStatus[channel].RightVolume, bufptr, length);
@@ -235,10 +230,10 @@ static int OutputBlocking(unsigned int channel,
 {
   if (!AudioReady) return -1;
   if (channel >= AUDIO_CHANNELS) return -1;
-  if (vol1 > PSP_VOLUME_MAX) vol1 = PSP_VOLUME_MAX;
-  if (vol2 > PSP_VOLUME_MAX) vol2 = PSP_VOLUME_MAX;
+  if (vol1 > PSP_AUDIO_MAX_VOLUME) vol1 = PSP_AUDIO_MAX_VOLUME;
+  if (vol2 > PSP_AUDIO_MAX_VOLUME) vol2 = PSP_AUDIO_MAX_VOLUME;
 
-  // sceAudioSetChannelDataLen(channel, length);
+  sceAudioSetChannelDataLen(channel, length);
   return sceAudioOutputPannedBlocking(AudioStatus[channel].Handle,
     vol1, vol2, buf);
 }
@@ -266,5 +261,9 @@ void pspAudioSetChannelCallback(int channel, pspAudioCallback callback, void *us
   pci->Callback = NULL;
   pci->Userdata = userdata;
   pci->Callback = callback;
+}
+int pspAudioGetSampleCount()
+{
+  return SampleCount;
 }
 

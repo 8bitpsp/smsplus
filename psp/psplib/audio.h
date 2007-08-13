@@ -15,7 +15,8 @@
 extern "C" {
 #endif
 
-#define PSP_VOLUME_MAX 0x8000
+#define PSP_AUDIO_SAMPLE_ALIGN(s) (((s) + 63) & ~63)
+#define PSP_AUDIO_MAX_VOLUME      0x8000
 
 typedef struct 
 {
@@ -30,6 +31,7 @@ void pspAudioSetVolume(int channel, int left, int right);
 void pspAudioSetChannelCallback(int channel, pspAudioCallback callback, void *userdata);
 void pspAudioShutdown();
 int  pspAudioOutputBlocking(unsigned int channel, void *buf);
+int  pspAudioGetSampleCount();
 
 #ifdef __cplusplus
 }

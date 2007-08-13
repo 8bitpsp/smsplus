@@ -87,6 +87,8 @@ void pspVideoCallList(const void *list);
 
 void* pspVideoAllocateVramChunk(unsigned int bytes);
 
+unsigned int pspVideoGetVSyncFreq();
+
 #ifdef __cplusplus
 }
 #endif
