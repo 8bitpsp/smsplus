@@ -44,6 +44,7 @@ void InitEmulator()
 
   /* Initialize screen buffer */
   Screen = pspImageCreateVram(256, 192, PSP_IMAGE_INDEXED);
+	enable_new_pokey = 0;
 
   // pspImageClear(Screen, 0x8000);
 
