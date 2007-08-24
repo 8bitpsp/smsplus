@@ -16,7 +16,7 @@ $(PSPLIB)/psp.o:    $(PSPLIB)/psp.c $(PSPLIB)/psp.h \
 $(PSPLIB)/ui.o:     $(PSPLIB)/ui.c $(PSPLIB)/ui.h \
                     $(PSPLIB)/video.c $(PSPLIB)/menu.c \
                     $(PSPLIB)/psp.c $(PSPLIB)/fileio.c \
-                    $(PSPLIB)/ctrl.c
+                    $(PSPLIB)/ctrl.c $(PSPLIB)/font.c
 $(PSPLIB)/video.o:  $(PSPLIB)/video.c $(PSPLIB)/video.h \
                     $(PSPLIB)/font.c $(PSPLIB)/image.c
 $(PSPLIB)/util.o:   $(PSPLIB)/util.c $(PSPLIB)/util.h \

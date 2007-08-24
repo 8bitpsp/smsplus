@@ -21,8 +21,9 @@
 #include "fileio.h"
 #include "ctrl.h"
 #include "ui.h"
+#include "font.h"
 
-#define MAX_DIR_LEN 255
+#define MAX_DIR_LEN 1024
 
 #define  CONTROL_BUTTON_MASK \
   (PSP_CTRL_CIRCLE | PSP_CTRL_TRIANGLE | PSP_CTRL_CROSS | PSP_CTRL_SQUARE | \
@@ -31,6 +32,10 @@
 static const char 
   *AlertDialogButtonTemplate   = "\026\001\020/\026\002\020 Close",
   *ConfirmDialogButtonTemplate = "\026\001\020 Confirm\t\026\002\020 Cancel",
+  *YesNoCancelDialogButtonTemplate = 
+    "\026\001\020 Yes\t\026"PSP_CHAR_SQUARE"\020 No\t\026\002\020 Cancel",
+
+  *SelectorTemplate = "\026\001\020 Confirm\t\026\002\020 Cancel",
 
   *BrowserCancelTemplate    = "\026\002\020 Cancel",
   *BrowserEnterDirTemplate  = "\026\001\020 Enter directory",
@@ -49,9 +54,9 @@ struct UiPos
   const PspMenuItem *Top;
 };
 
-void _pspUiReplaceIcons(char *string);
+void pspUiReplaceIcons(char *string);
 
-void _pspUiReplaceIcons(char *string)
+void pspUiReplaceIcons(char *string)
 {
   char *ch;
 
@@ -81,7 +86,7 @@ void pspUiAlert(const char *message)
 {
   int sx, sy, dx, dy, th, fh, mw, cw, w, h;
   char *instr = strdup(AlertDialogButtonTemplate);
-  _pspUiReplaceIcons(instr);
+  pspUiReplaceIcons(instr);
 
   mw = pspFontGetTextWidth(UiMetric.Font, message);
   cw = pspFontGetTextWidth(UiMetric.Font, instr);
@@ -127,18 +132,19 @@ void pspUiAlert(const char *message)
   }
 }
 
-int pspUiConfirm(const char *message)
+int pspUiYesNoCancel(const char *message)
 {
-  int sx, sy, dx, dy, fh, mw, cw, w, h;
-  char *instr = strdup(ConfirmDialogButtonTemplate);
-  _pspUiReplaceIcons(instr);
+  int sx, sy, dx, dy, th, fh, mw, cw, w, h;
+  char *instr = strdup(YesNoCancelDialogButtonTemplate);
+  pspUiReplaceIcons(instr);
 
   mw = pspFontGetTextWidth(UiMetric.Font, message);
   cw = pspFontGetTextWidth(UiMetric.Font, instr);
   fh = pspFontGetLineHeight(UiMetric.Font);
+  th = pspFontGetTextHeight(UiMetric.Font, message);
 
   w = ((mw > cw) ? mw : cw) + 50;
-  h = fh * 4;
+  h = th + fh * 3;
   sx = SCR_WIDTH / 2 - w / 2;
   sy = SCR_HEIGHT / 2 - h / 2;
   dx = sx + w;
@@ -150,9 +156,63 @@ int pspUiConfirm(const char *message)
 
   pspVideoFillRect(sx, sy, dx, dy, UiMetric.DialogBgColor);
   pspVideoDrawRect(sx + 1, sy + 1, dx - 2, dy - 2, UiMetric.DialogBorderColor);
-  pspVideoPrint(UiMetric.Font, SCR_WIDTH / 2 - mw / 2, sy + fh * 0.5, message, UiMetric.TextColor);
+  pspVideoPrint(UiMetric.Font, SCR_WIDTH / 2 - mw / 2, sy + fh * 0.5, message, 
+    UiMetric.TextColor);
+  pspVideoPrint(UiMetric.Font, SCR_WIDTH / 2 - cw / 2, dy - fh * 1.5, instr, 
+    UiMetric.TextColor);
+  free(instr);
 
-  pspVideoPrint(UiMetric.Font, SCR_WIDTH / 2 - cw / 2, sy + fh * 2.5, instr, UiMetric.TextColor);
+  pspVideoEnd();
+
+  /* Swap buffers */
+  pspVideoWaitVSync();
+  pspVideoSwapBuffers();
+
+  SceCtrlData pad;
+
+  /* Loop until X or O is pressed */
+  while (!ExitPSP)
+  {
+    if (!pspCtrlPollControls(&pad))
+      continue;
+
+    if (pad.Buttons & UiMetric.OkButton || pad.Buttons & UiMetric.CancelButton 
+      || pad.Buttons & PSP_CTRL_SQUARE) break;
+  }
+
+  if (pad.Buttons & UiMetric.CancelButton) return PSP_UI_CANCEL;
+  else if (pad.Buttons & PSP_CTRL_SQUARE) return PSP_UI_NO;
+  else return PSP_UI_YES;
+}
+
+int pspUiConfirm(const char *message)
+{
+  int sx, sy, dx, dy, th, fh, mw, cw, w, h;
+  char *instr = strdup(ConfirmDialogButtonTemplate);
+  pspUiReplaceIcons(instr);
+
+  mw = pspFontGetTextWidth(UiMetric.Font, message);
+  cw = pspFontGetTextWidth(UiMetric.Font, instr);
+  fh = pspFontGetLineHeight(UiMetric.Font);
+  th = pspFontGetTextHeight(UiMetric.Font, message);
+
+  w = ((mw > cw) ? mw : cw) + 50;
+  h = th + fh * 3;
+  sx = SCR_WIDTH / 2 - w / 2;
+  sy = SCR_HEIGHT / 2 - h / 2;
+  dx = sx + w;
+  dy = sy + h;
+
+  pspVideoBegin();
+
+  pspVideoFillRect(0, 0, SCR_WIDTH, SCR_HEIGHT, UiMetric.DialogFogColor);
+
+  pspVideoFillRect(sx, sy, dx, dy, UiMetric.DialogBgColor);
+  pspVideoDrawRect(sx + 1, sy + 1, dx - 2, dy - 2, UiMetric.DialogBorderColor);
+  pspVideoPrint(UiMetric.Font, SCR_WIDTH / 2 - mw / 2, sy + fh * 0.5, message, 
+    UiMetric.TextColor);
+  pspVideoPrint(UiMetric.Font, SCR_WIDTH / 2 - cw / 2, dy - fh * 1.5, instr, 
+    UiMetric.TextColor);
   free(instr);
 
   pspVideoEnd();
@@ -212,7 +272,7 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
   PspFile *file;
   PspFileList *list;
   const PspMenuItem *sel;
-  const PspMenuItem *item;
+  PspMenuItem *item;
   SceCtrlData pad;
   char *instr;
 
@@ -244,7 +304,6 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
   instr_len += 1 + strlen(BrowserParentDirTemplate);
   instr = (char*)malloc(sizeof(char) * instr_len);
 
-
   u32 ticks_per_sec, ticks_per_upd;
   u64 current_tick, last_tick;
 
@@ -259,8 +318,11 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
     if ((list = pspFileIoGetFileList(cur_path, browser->Filter)))
     {
       /* Check for a parent path, prepend .. if necessary */
-      if ((hasparent=!pspFileIoIsRootDirectory(cur_path)))
-        pspMenuAppendItem(menu, "..", (void*)PSP_FILEIO_DIR);
+      if ((hasparent =! pspFileIoIsRootDirectory(cur_path)))
+      {
+        item = pspMenuAppendItem(menu, "..", 0);
+        item->Param = (void*)PSP_FILEIO_DIR;
+      }
 
       /* Add a menu item for each file */
       for (file = list->First; file; file = file->Next)
@@ -269,7 +331,9 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
         if (file->Name && file->Name[0] == '.')
           continue;
 
-        item = pspMenuAppendItem(menu, file->Name, (void*)file->Attrs);
+        item = pspMenuAppendItem(menu, file->Name, 0);
+        item->Param = (void*)file->Attrs;
+
         if (cur_file && strcmp(file->Name, cur_file) == 0)
           sel = item;
       }
@@ -282,8 +346,11 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
     else
     {
       /* Check for a parent path, prepend .. if necessary */
-      if ((hasparent=!pspFileIoIsRootDirectory(cur_path)))
-        pspMenuAppendItem(menu, "..", (void*)PSP_FILEIO_DIR);
+      if ((hasparent =! pspFileIoIsRootDirectory(cur_path)))
+      {
+        item = pspMenuAppendItem(menu, "..", 0);
+        item->Param = (void*)PSP_FILEIO_DIR;
+      }
     }
 
     /* Initialize variables */
@@ -305,9 +372,12 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
     /* Compute index and offset of selected file */
     if (sel)
     {
-      pos.Top=menu->First;
-      for (item=menu->First; item != sel; item=item->Next)
-        if (pos.Index + 1 >= lnmax) { pos.Offset++; pos.Top=pos.Top->Next; } else pos.Index++;
+      pos.Top = menu->First;
+      for (item = menu->First; item != sel; item = item->Next)
+      {
+        if (pos.Index + 1 >= lnmax) { pos.Offset++; pos.Top=pos.Top->Next; } 
+        else pos.Index++;
+      }
     }
 
     pspVideoWaitVSync();
@@ -360,7 +430,7 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
         /* File/dir selection */
         if (pad.Buttons & UiMetric.OkButton)
         {
-          if (((unsigned int)sel->Userdata & PSP_FILEIO_DIR))
+          if (((unsigned int)sel->Param & PSP_FILEIO_DIR))
           {
             /* Selected a directory, descend */
             pspFileIoEnterDirectory(&cur_path, sel->Caption);
@@ -417,7 +487,7 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
         if (exit) goto exit_browser;
       }
 
-      is_dir = (unsigned int)sel->Userdata & PSP_FILEIO_DIR;
+      is_dir = (unsigned int)sel->Param & PSP_FILEIO_DIR;
 
       pspVideoBegin();
 
@@ -445,27 +515,31 @@ void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path)
         strcat(instr, "\t");
         strcat(instr, BrowserParentDirTemplate);
       }
-      _pspUiReplaceIcons(instr);
+      pspUiReplaceIcons(instr);
       pspVideoPrintCenter(UiMetric.Font, 
         sx, SCR_HEIGHT - fh, dx, instr, UiMetric.StatusBarColor);
 
       /* Draw scrollbar */
       if (sbh > 0)
       {
-        sby = sy + (int)((float)(h - sbh) * ((float)(pos.Offset + pos.Index) / (float)menu->Count));
-        pspVideoFillRect(dx - UiMetric.ScrollbarWidth, sy, dx, dy, UiMetric.ScrollbarBgColor);
-        pspVideoFillRect(dx - UiMetric.ScrollbarWidth, sby, dx, sby + sbh, UiMetric.ScrollbarColor);
+        sby = sy + (int)((float)(h - sbh) 
+          * ((float)(pos.Offset + pos.Index) / (float)menu->Count));
+        pspVideoFillRect(dx - UiMetric.ScrollbarWidth, sy, dx, dy, 
+          UiMetric.ScrollbarBgColor);
+        pspVideoFillRect(dx - UiMetric.ScrollbarWidth, sby, dx, sby + sbh, 
+          UiMetric.ScrollbarColor);
       }
 
       /* Render the files */
-      for (item = pos.Top, i = 0, j = sy; item && i < lnmax; item = item->Next, j += fh, i++)
+      for (item = (PspMenuItem*)pos.Top, i = 0, j = sy; 
+        item && i < lnmax; item = item->Next, j += fh, i++)
       {
         if (item == sel)
           pspVideoFillRect(sx, j, sx + w, j + fh, UiMetric.SelectedBgColor);
 
-        pspVideoPrintClipped(UiMetric.Font, sx + 10, j, item->Caption, w - 10, "...", 
-          (item == sel) ? UiMetric.SelectedColor :
-            ((unsigned int)item->Userdata & PSP_FILEIO_DIR) 
+        pspVideoPrintClipped(UiMetric.Font, sx + 10, j, item->Caption, w - 10, 
+          "...", (item == sel) ? UiMetric.SelectedColor :
+            ((unsigned int)item->Param & PSP_FILEIO_DIR) 
               ? UiMetric.BrowserDirectoryColor : UiMetric.BrowserFileColor);
       }
 
@@ -707,7 +781,7 @@ void pspUiOpenGallery(const PspUiGallery *gallery, const char *title)
       static char help_copy[MAX_DIR_LEN];
       strncpy(help_copy, sel->HelpText, MAX_DIR_LEN);
       help_copy[MAX_DIR_LEN - 1] = '\0';
-      _pspUiReplaceIcons(help_copy);
+      pspUiReplaceIcons(help_copy);
 
       pspVideoPrintCenter(UiMetric.Font, 
         0, SCR_HEIGHT - fh, SCR_WIDTH, help_copy, UiMetric.StatusBarColor);
@@ -1012,7 +1086,7 @@ void pspUiOpenMenu(const PspUiMenu *uimenu, const char *title)
         static char help_copy[MAX_DIR_LEN];
         strncpy(help_copy, sel->HelpText, MAX_DIR_LEN);
         help_copy[MAX_DIR_LEN - 1] = '\0';
-       _pspUiReplaceIcons(help_copy);
+        pspUiReplaceIcons(help_copy);
 
         dirs = help_copy;
       }
@@ -1021,7 +1095,7 @@ void pspUiOpenMenu(const PspUiMenu *uimenu, const char *title)
         static char help_copy[MAX_DIR_LEN];
         strncpy(help_copy, OptionModeTemplate, MAX_DIR_LEN);
         help_copy[MAX_DIR_LEN - 1] = '\0';
-       _pspUiReplaceIcons(help_copy);
+        pspUiReplaceIcons(help_copy);
 
         dirs = help_copy;
       }
@@ -1105,8 +1179,8 @@ void pspUiOpenMenu(const PspUiMenu *uimenu, const char *title)
 
       /* Up arrow */
       if (option)
-        pspVideoPrint(UiMetric.Font, 
-          arrow_x, i + fh + anim_frame, "\272", UiMetric.MenuDecorColor);
+        pspVideoPrint(UiMetric.Font, arrow_x, 
+          i + fh + anim_frame, PSP_CHAR_UP_ARROW, UiMetric.MenuDecorColor);
 
       /* Render following items */
       i = sy + (pos.Index  + 1) * fh;
@@ -1124,9 +1198,8 @@ void pspUiOpenMenu(const PspUiMenu *uimenu, const char *title)
 
       /* Down arrow */
       if (option)
-        pspVideoPrint(UiMetric.Font, 
-          arrow_x, i - fh - anim_frame, 
-          "\273", UiMetric.MenuDecorColor);
+        pspVideoPrint(UiMetric.Font, arrow_x, i - fh - anim_frame, 
+          PSP_CHAR_DOWN_ARROW, UiMetric.MenuDecorColor);
     }
 
     /* Perform any custom drawing */
@@ -1250,3 +1323,169 @@ void pspUiGetStatusString(char *status, int length)
   strncpy(status, main_str, length);
   status[length - 1] = '\0';
 }
+
+const PspMenuItem* pspUiSelect(const char *title, const PspMenu *menu)
+{
+  const PspMenuItem *sel, *item;
+  struct UiPos pos;
+  int lnmax, lnhalf;
+  int i, j, h, w, fh = pspFontGetLineHeight(UiMetric.Font);
+  int sx, sy, dx, dy;
+  int anim_frame = 0, anim_incr = 1;
+  int arrow_w = pspFontGetTextWidth(UiMetric.Font, PSP_CHAR_DOWN_ARROW);
+  int widest = 100;
+  SceCtrlData pad;
+
+  char *help_text = strdup(SelectorTemplate);
+  pspUiReplaceIcons(help_text);
+
+  /* Determine width of the longest caption */
+  for (item = menu->First; item; item = item->Next)
+  {
+    if (item->Caption)
+    {
+      int item_w = pspFontGetTextWidth(UiMetric.Font, item->Caption);
+      if (item_w > widest) 
+        widest = item_w;
+    }
+  }
+
+  widest += UiMetric.MenuItemMargin * 2;
+
+  sx = SCR_WIDTH - widest;
+  sy = UiMetric.Top;
+  dx = SCR_WIDTH;
+  dy = UiMetric.Bottom;
+  w = dx - sx;
+  h = dy - sy;
+
+  u32 ticks_per_sec, ticks_per_upd;
+  u64 current_tick, last_tick;
+
+  /* Get copy of screen */
+  PspImage *screen = pspVideoGetVramBufferCopy();
+
+  /* Initialize variables */
+  lnmax = (dy - sy) / fh;
+  lnhalf = lnmax >> 1;
+
+  sel = menu->First;
+  pos.Top = menu->First;
+  pos.Index = pos.Offset = 0;
+
+  pspVideoWaitVSync();
+
+  /* Compute update frequency */
+  ticks_per_sec = sceRtcGetTickResolution();
+  sceRtcGetCurrentTick(&last_tick);
+  ticks_per_upd = ticks_per_sec / UiMetric.MenuFps;
+
+  /* Begin navigation loop */
+  while (!ExitPSP)
+  {
+    if (!pspCtrlPollControls(&pad))
+      continue;
+
+    /* Incr/decr animation frame */
+    anim_frame += anim_incr;
+    if (anim_frame > 2 || anim_frame < 0) 
+      anim_incr *= -1;
+
+    /* Check the directional buttons */
+    if (sel)
+    {
+      if ((pad.Buttons & PSP_CTRL_DOWN || pad.Buttons & PSP_CTRL_ANALDOWN) 
+        && sel->Next)
+      {
+        if (pos.Index + 1 >= lnmax) { pos.Offset++; pos.Top = pos.Top->Next; } 
+        else pos.Index++;
+        sel = sel->Next;
+      }
+      else if ((pad.Buttons & PSP_CTRL_UP || pad.Buttons & PSP_CTRL_ANALUP) 
+        && sel->Prev)
+      {
+        if (pos.Index - 1 < 0) { pos.Offset--; pos.Top = pos.Top->Prev; }
+        else pos.Index--;
+        sel = sel->Prev;
+      }
+      else if (pad.Buttons & PSP_CTRL_LEFT)
+      {
+        for (i = 0; sel->Prev && i < lnhalf; i++)
+        {
+          if (pos.Index - 1 < 0) { pos.Offset--; pos.Top = pos.Top->Prev; }
+          else pos.Index--;
+          sel = sel->Prev;
+        }
+      }
+      else if (pad.Buttons & PSP_CTRL_RIGHT)
+      {
+        for (i = 0; sel->Next && i < lnhalf; i++)
+        {
+          if (pos.Index + 1 >= lnmax) { pos.Offset++; pos.Top = pos.Top->Next; }
+          else pos.Index++;
+          sel=sel->Next;
+        }
+      }
+
+      if (pad.Buttons & UiMetric.OkButton) break;
+    }
+
+    if (pad.Buttons & UiMetric.CancelButton) { sel = NULL; break; }
+
+    pspVideoBegin();
+
+    /* Clear screen */
+    pspVideoPutImage(screen, 0, 0, screen->Width, screen->Height);
+
+    /* Apply fog and draw right frame */
+    pspVideoFillRect(0, 0, SCR_WIDTH, SCR_HEIGHT, UiMetric.DialogFogColor);
+    pspVideoFillRect(sx, 0, dx, SCR_HEIGHT, UiMetric.MenuOptionBoxBg);
+
+    /* Title */
+    if (title)
+      pspVideoPrintCenter(UiMetric.Font, sx, 0, dx,
+        title, UiMetric.TitleColor);
+
+    /* Render the items */
+    for (item = (PspMenuItem*)pos.Top, i = 0, j = sy; 
+      item && i < lnmax; item = item->Next, j += fh, i++)
+    {
+      if (item == sel)
+        pspVideoFillRect(sx, j, sx + w, j + fh, UiMetric.SelectedBgColor);
+
+      pspVideoPrintClipped(UiMetric.Font, sx + 10, j, item->Caption, w - 10, 
+        "...", (item == sel) ? UiMetric.SelectedColor : UiMetric.TextColor);
+    }
+
+    /* Up arrow */
+    if (pos.Top->Prev)
+      pspVideoPrint(UiMetric.Font, SCR_WIDTH - arrow_w * 2,
+        sy + anim_frame, PSP_CHAR_UP_ARROW, UiMetric.MenuDecorColor);
+
+    /* Down arrow */
+    if (item)
+      pspVideoPrint(UiMetric.Font, SCR_WIDTH - arrow_w * 2, 
+        dy - fh - anim_frame, PSP_CHAR_DOWN_ARROW, UiMetric.MenuDecorColor);
+
+    /* Shortcuts */
+    pspVideoPrintCenter(UiMetric.Font, sx, SCR_HEIGHT - fh, dx,
+      help_text, UiMetric.StatusBarColor);
+
+    pspVideoEnd();
+
+    /* Wait if needed */
+    do { sceRtcGetCurrentTick(&current_tick); }
+    while (current_tick - last_tick < ticks_per_upd);
+    last_tick = current_tick;
+
+    /* Swap buffers */
+    pspVideoWaitVSync();
+    pspVideoSwapBuffers();
+  }
+
+  free(help_text);
+  pspImageDestroy(screen);
+
+  return sel;
+}
+

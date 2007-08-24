@@ -34,6 +34,9 @@ extern "C" {
 #define PSP_CHAR_SELECT    "\257\260"
 #define PSP_CHAR_START     "\261\262"
 
+#define PSP_CHAR_UP_ARROW    "\272"
+#define PSP_CHAR_DOWN_ARROW  "\273"
+
 #define PSP_CHAR_POWER      "\267"
 #define PSP_CHAR_EMPTY_BATT "\266"
 #define PSP_CHAR_FULL_BATT  "\263"

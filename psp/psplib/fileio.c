@@ -191,10 +191,9 @@ char* pspFileIoGetParentDirectory(const char *path)
 
 const char* pspFileIoGetFilename(const char *path)
 {
-  char *pos = strrchr(path, '/');
-
-  if (!pos) return NULL;
-
+  char *pos;
+  if (!(pos=strrchr(path, '/'))) 
+    return NULL;
   return pos + 1;
 }
 

@@ -44,7 +44,6 @@ void InitEmulator()
 
   /* Initialize screen buffer */
   Screen = pspImageCreateVram(256, 192, PSP_IMAGE_INDEXED);
-	enable_new_pokey = 0;
 
   // pspImageClear(Screen, 0x8000);
 
@@ -196,11 +195,11 @@ int ParseInput()
   /* Check the input */
   if (pspCtrlPollControls(&pad))
   {
-    /* DEBUGGING
+#ifdef PSP_DEBUG
     if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
       == (PSP_CTRL_SELECT | PSP_CTRL_START))
         pspUtilSaveVramSeq(ScreenshotPath, "game");
-    //*/
+#endif
 
     /* Parse input */
     int i, on, code;

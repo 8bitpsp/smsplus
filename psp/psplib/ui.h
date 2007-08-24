@@ -102,6 +102,10 @@ typedef struct PspUiSplash
   const char* (*OnGetStatusBarText)(const struct PspUiSplash *splash);
 } PspUiSplash;
 
+#define PSP_UI_YES    2
+#define PSP_UI_NO     1
+#define PSP_UI_CANCEL 0
+
 char pspUiGetButtonIcon(u32 button_mask);
 
 void pspUiOpenBrowser(PspUiFileBrowser *browser, 
@@ -111,8 +115,10 @@ void pspUiOpenMenu(const PspUiMenu *uimenu, const char *title);
 void pspUiSplashScreen(PspUiSplash *splash);
 
 int  pspUiConfirm(const char *message);
+int  pspUiYesNoCancel(const char *message);
 void pspUiAlert(const char *message);
 void pspUiFlashMessage(const char *message);
+const PspMenuItem* pspUiSelect(const char *title, const PspMenu *menu);
 
 void pspUiGetStatusString(char *status, int length);
 

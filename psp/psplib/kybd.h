@@ -22,7 +22,7 @@ extern "C" {
 struct PspKeyboardButton
 {
   char *Caption;
-  unsigned char Code;
+  unsigned short Code;
   unsigned short X;
   unsigned short Y;
   unsigned short W;
@@ -34,7 +34,7 @@ struct PspKeyboardButton
 
 struct PspStickyButton
 {
-  unsigned char Code;
+  unsigned short Code;
   unsigned char Status;
   unsigned short *KeyIndex;
   unsigned char IndexCount;
@@ -49,7 +49,7 @@ struct PspKeyboardLayout
   unsigned short MatrixWidth;
   unsigned short MatrixHeight;
   unsigned short Selected;
-  unsigned char HeldDown;
+  unsigned short HeldDown;
   unsigned int __attribute__((aligned(16))) CallList[262144];
 
   int(*ReadCallback)(unsigned int code);
@@ -64,8 +64,7 @@ void pspKybdNavigate(PspKeyboardLayout *layout, SceCtrlData *pad);
 void pspKybdReleaseAll(PspKeyboardLayout *layout);
 
 PspKeyboardLayout* pspKybdLoadLayout(const char *path, 
-  int(*read_callback)(unsigned int),
-  void(*write_callback)(unsigned int, int));
+  int(*read_callback)(unsigned int), void(*write_callback)(unsigned int, int));
 void pspKybdDestroyLayout(PspKeyboardLayout *layout);
 
 #ifdef __cplusplus

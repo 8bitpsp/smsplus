@@ -49,13 +49,13 @@ void _pspKybdRenderKeyboard(PspKeyboardLayout *layout);
 void pspKybdReinit(PspKeyboardLayout *layout)
 {
   int i;
-  for (i = 0; i < PSP_KYBD_BUTTONS; i++)
-    PushTime[i] = 0;
-
+  for (i = 0; i < PSP_KYBD_BUTTONS; i++) PushTime[i] = 0;
   layout->HeldDown = 0;
 
   for (i = 0; i < layout->StickyCount; i++)
-    layout->StickyKeys[i].Status = layout->ReadCallback(layout->StickyKeys[i].Code);
+    if (layout->ReadCallback)
+      layout->StickyKeys[i].Status = 
+        layout->ReadCallback(layout->StickyKeys[i].Code);
 }
 
 void pspKybdRender(const PspKeyboardLayout *layout)
@@ -143,7 +143,7 @@ void _pspKybdFilterRepeats(SceCtrlData *pad)
 void pspKybdReleaseAll(PspKeyboardLayout *layout)
 {
   /* Release 'held down' key */
-  if (layout->HeldDown)
+  if (layout->HeldDown && layout->WriteCallback)
   {
     layout->WriteCallback(layout->HeldDown, 0);
     layout->HeldDown = 0;
@@ -154,7 +154,8 @@ void pspKybdReleaseAll(PspKeyboardLayout *layout)
   for (i = 0; i < layout->StickyCount; i++)
   {
     layout->StickyKeys[i].Status = 0;
-    layout->WriteCallback(layout->StickyKeys[i].Code, 0);
+    if (layout->WriteCallback) 
+      layout->WriteCallback(layout->StickyKeys[i].Code, 0);
   }
 }
 
@@ -164,7 +165,8 @@ void pspKybdNavigate(PspKeyboardLayout *layout, SceCtrlData *pad)
 
   _pspKybdFilterRepeats(pad);
 
-  if (pad->Buttons & PSP_CTRL_SQUARE && !layout->HeldDown)
+  if ((pad->Buttons & PSP_CTRL_SQUARE)
+    && layout->WriteCallback && !layout->HeldDown)
   {
     /* Button pressed */
     layout->HeldDown = layout->Keys[layout->Selected].Code;
@@ -185,7 +187,8 @@ void pspKybdNavigate(PspKeyboardLayout *layout, SceCtrlData *pad)
       }
     }
   }
-  else if (!(pad->Buttons & PSP_CTRL_SQUARE) && layout->HeldDown)
+  else if (!(pad->Buttons & PSP_CTRL_SQUARE) 
+    && layout->WriteCallback && layout->HeldDown)
   {
     /* Button released */
     layout->WriteCallback(layout->HeldDown, 0);
@@ -237,32 +240,34 @@ void pspKybdNavigate(PspKeyboardLayout *layout, SceCtrlData *pad)
     }
   }
 
-  if (pad->Buttons & PSP_CTRL_CIRCLE && layout->Keys[layout->Selected].IsSticky)
+  if (layout->WriteCallback)
   {
-    for (i = 0; i < layout->StickyCount; i++)
-    {
-      /* Sticky key; toggle status */
-      if (layout->Keys[layout->Selected].Code == layout->StickyKeys[i].Code)
-      {
-        layout->StickyKeys[i].Status = !layout->StickyKeys[i].Status;
-        layout->WriteCallback(layout->StickyKeys[i].Code, layout->StickyKeys[i].Status);
-        break;
-      }
-    }
-  }
-  else if (pad->Buttons & PSP_CTRL_TRIANGLE)
-  {
-    /* Unset all sticky keys */
-    for (i = 0; i < layout->StickyCount; i++)
-    {
-      layout->StickyKeys[i].Status = 0;
-      layout->WriteCallback(layout->StickyKeys[i].Code, 0);
-    }
+	  if (pad->Buttons & PSP_CTRL_CIRCLE && layout->Keys[layout->Selected].IsSticky)
+	  {
+	    for (i = 0; i < layout->StickyCount; i++)
+	    {
+	      /* Sticky key; toggle status */
+	      if (layout->Keys[layout->Selected].Code == layout->StickyKeys[i].Code)
+	      {
+	        layout->StickyKeys[i].Status = !layout->StickyKeys[i].Status;
+	        layout->WriteCallback(layout->StickyKeys[i].Code, layout->StickyKeys[i].Status);
+	        break;
+	      }
+	    }
+	  }
+	  else if (pad->Buttons & PSP_CTRL_TRIANGLE)
+	  {
+	    /* Unset all sticky keys */
+	    for (i = 0; i < layout->StickyCount; i++)
+	    {
+	      layout->StickyKeys[i].Status = 0;
+	      layout->WriteCallback(layout->StickyKeys[i].Code, 0);
+	    }
+	  }
   }
 
   /* Unset used buttons */
-  for (i = 0; i < PSP_KYBD_BUTTONS; i++)
-    pad->Buttons &= ~ButtonMap[i];
+  for (i = 0; i < PSP_KYBD_BUTTONS; i++) pad->Buttons &= ~ButtonMap[i];
 }
 
 void pspKybdDestroyLayout(PspKeyboardLayout *layout)
@@ -338,8 +343,7 @@ void _pspKybdRenderKeyboard(PspKeyboardLayout *layout)
 }
 
 PspKeyboardLayout* pspKybdLoadLayout(const char *path, 
-  int(*read_callback)(unsigned int),
-  void(*write_callback)(unsigned int, int))
+  int(*read_callback)(unsigned int), void(*write_callback)(unsigned int, int))
 {
   /* Reset physical button status */
   int i, j;
@@ -385,7 +389,7 @@ PspKeyboardLayout* pspKybdLoadLayout(const char *path,
     malloc(sizeof(struct PspKeyboardButton) * layout->KeyCount);
 
   /* Parse */
-  int c, count;
+  int c, count, code;
   for (i = 0; !feof(file) && i < layout->KeyCount; i++)
   {
     button = &layout->Keys[i];
@@ -399,9 +403,10 @@ PspKeyboardLayout* pspKybdLoadLayout(const char *path,
     }
 
     /* Scan a single line */
-    fscanf(file, "0x%hx\t%hi\t%hi\t%hi\t%hi\n", 
-      (unsigned short*)&(button->Code), 
-      &(button->X), &(button->Y), &(button->W), &(button->H));
+    fscanf(file, "0x%x\t%hi\t%hi\t%hi\t%hi\n", 
+      &code, &(button->X), &(button->Y), &(button->W), &(button->H));
+
+    button->Code = code & 0xffff;
     button->Caption = strdup(label);
     button->IsSticky = 0;
 
@@ -431,7 +436,8 @@ PspKeyboardLayout* pspKybdLoadLayout(const char *path,
       {
         sticky = &layout->StickyKeys[i];
 
-        fscanf(file, "0x%hx\t", (unsigned short*)&(sticky->Code));
+        fscanf(file, "0x%x\t", &code);
+        sticky->Code = code & 0xffff;
         sticky->Status = 0;
         sticky->IndexCount = 0;
         sticky->KeyIndex = NULL;

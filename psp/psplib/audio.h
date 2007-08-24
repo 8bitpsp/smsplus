@@ -3,8 +3,8 @@
 /**                          audio.h                        **/
 /**                                                         **/
 /** This file contains definitions for the audio rendering  **/
-/** library. It is based almost entirely on the pspaudio    **/
-/** library by Adresd and Marcus R. Brown, 2005.            **/
+/** library. It is based on the pspaudio library by Adresd  **/
+/** and Marcus R. Brown, 2005.                              **/
 /**                                                         **/
 /** Akop Karapetyan 2007                                    **/
 /*************************************************************/

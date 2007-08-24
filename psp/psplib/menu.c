@@ -59,10 +59,10 @@ void pspMenuLoad(PspMenu *menu, const PspMenuItemDef *def)
   if (menu->First) pspMenuClear(menu);
 
   /* Initialize menu */
-  for (; def->Userdata || def->Caption; def++)
+  for (; def->ID || def->Caption; def++)
   {
     /* Append the item */
-    item = pspMenuAppendItem(menu, def->Caption, def->Userdata);
+    item = pspMenuAppendItem(menu, def->Caption, def->ID);
 
     /* Add the options */
     if (def->OptionList)
@@ -166,11 +166,11 @@ void pspMenuClearOptions(PspMenuItem *item)
   item->Options=NULL;
 }
 
-PspMenuItem* pspMenuFindItemByUserdata(PspMenu *menu, const void *userdata)
+PspMenuItem* pspMenuFindItemById(PspMenu *menu, unsigned int id)
 {
   PspMenuItem *item;
   for (item=menu->First; item; item=item->Next)
-    if (item->Userdata == userdata)
+    if (item->ID == id)
       return item;
 
   return NULL;
@@ -188,7 +188,8 @@ PspMenuItem* pspMenuGetNthItem(PspMenu *menu, int index)
   return NULL;
 }
 
-PspMenuItem* pspMenuAppendItem(PspMenu *menu, const char *caption, const void *userdata)
+PspMenuItem* pspMenuAppendItem(PspMenu *menu, const char *caption, 
+  unsigned int id)
 {
   PspMenuItem* item = (PspMenuItem*)malloc(sizeof(PspMenuItem));
 
@@ -206,7 +207,8 @@ PspMenuItem* pspMenuAppendItem(PspMenu *menu, const char *caption, const void *u
 
   item->HelpText = NULL;
   item->Icon = NULL;
-  item->Userdata = userdata;
+  item->ID = id;
+  item->Param = NULL;
   item->Options = NULL;
   item->Selected = NULL;
   item->Next = NULL;
