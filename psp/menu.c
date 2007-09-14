@@ -39,6 +39,7 @@
 #define OPTION_CLOCK_FREQ   5
 #define OPTION_SHOW_FPS     6
 #define OPTION_CONTROL_MODE 7
+#define OPTION_ANIMATE      8
 
 #define SYSTEM_SCRNSHOT     1
 #define SYSTEM_RESET        2
@@ -208,44 +209,46 @@ static const PspMenuItemDef
     MENU_HEADER("Menu"),
     MENU_ITEM("Button mode", OPTION_CONTROL_MODE, ControlModeOptions,  -1, 
       "\026\250\020 Change OK and Cancel button mapping"),
+    MENU_ITEM("Animations", OPTION_ANIMATE, ToggleOptions,  -1, 
+      "\026\250\020 Enable/disable in-menu animations"),
     MENU_END_ITEMS
   },
   ControlMenuDef[] = {
-    MENU_ITEM("\026"PSP_CHAR_ANALUP, MAP_ANALOG_UP, ButtonMapOptions, -1, 
+    MENU_ITEM(PSP_CHAR_ANALUP, MAP_ANALOG_UP, ButtonMapOptions, -1, 
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_ANALDOWN, MAP_ANALOG_DOWN, ButtonMapOptions, -1, 
+    MENU_ITEM(PSP_CHAR_ANALDOWN, MAP_ANALOG_DOWN, ButtonMapOptions, -1, 
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_ANALLEFT, MAP_ANALOG_LEFT, ButtonMapOptions, -1,
+    MENU_ITEM(PSP_CHAR_ANALLEFT, MAP_ANALOG_LEFT, ButtonMapOptions, -1,
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_ANALRIGHT, MAP_ANALOG_RIGHT, ButtonMapOptions, -1,
+    MENU_ITEM(PSP_CHAR_ANALRIGHT, MAP_ANALOG_RIGHT, ButtonMapOptions, -1,
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_UP, MAP_BUTTON_UP, ButtonMapOptions, -1, 
+    MENU_ITEM(PSP_CHAR_UP, MAP_BUTTON_UP, ButtonMapOptions, -1, 
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_DOWN, MAP_BUTTON_DOWN, ButtonMapOptions, -1, 
+    MENU_ITEM(PSP_CHAR_DOWN, MAP_BUTTON_DOWN, ButtonMapOptions, -1, 
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_LEFT, MAP_BUTTON_LEFT, ButtonMapOptions, -1,
+    MENU_ITEM(PSP_CHAR_LEFT, MAP_BUTTON_LEFT, ButtonMapOptions, -1,
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_RIGHT, MAP_BUTTON_RIGHT, ButtonMapOptions, -1,
+    MENU_ITEM(PSP_CHAR_RIGHT, MAP_BUTTON_RIGHT, ButtonMapOptions, -1,
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_SQUARE, MAP_BUTTON_SQUARE, ButtonMapOptions, -1,
+    MENU_ITEM(PSP_CHAR_SQUARE, MAP_BUTTON_SQUARE, ButtonMapOptions, -1,
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_CROSS, MAP_BUTTON_CROSS, ButtonMapOptions, -1,
+    MENU_ITEM(PSP_CHAR_CROSS, MAP_BUTTON_CROSS, ButtonMapOptions, -1,
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_CIRCLE, MAP_BUTTON_CIRCLE, ButtonMapOptions, -1,
+    MENU_ITEM(PSP_CHAR_CIRCLE, MAP_BUTTON_CIRCLE, ButtonMapOptions, -1,
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_TRIANGLE, MAP_BUTTON_TRIANGLE, ButtonMapOptions, 
+    MENU_ITEM(PSP_CHAR_TRIANGLE, MAP_BUTTON_TRIANGLE, ButtonMapOptions, 
       -1, ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_LTRIGGER, MAP_BUTTON_LTRIGGER, ButtonMapOptions, 
+    MENU_ITEM(PSP_CHAR_LTRIGGER, MAP_BUTTON_LTRIGGER, ButtonMapOptions, 
       -1, ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_RTRIGGER, MAP_BUTTON_RTRIGGER, ButtonMapOptions, 
+    MENU_ITEM(PSP_CHAR_RTRIGGER, MAP_BUTTON_RTRIGGER, ButtonMapOptions, 
       -1, ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_SELECT, MAP_BUTTON_SELECT, ButtonMapOptions, 
+    MENU_ITEM(PSP_CHAR_SELECT, MAP_BUTTON_SELECT, ButtonMapOptions, 
       -1, ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_START, MAP_BUTTON_START, ButtonMapOptions, -1, 
+    MENU_ITEM(PSP_CHAR_START, MAP_BUTTON_START, ButtonMapOptions, -1, 
       ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_LTRIGGER"+"PSP_CHAR_RTRIGGER, 
+    MENU_ITEM(PSP_CHAR_LTRIGGER"+"PSP_CHAR_RTRIGGER, 
       MAP_BUTTON_LRTRIGGERS, ButtonMapOptions, -1, ControlHelpText),
-    MENU_ITEM("\026"PSP_CHAR_START"+"PSP_CHAR_SELECT,
+    MENU_ITEM(PSP_CHAR_START"+"PSP_CHAR_SELECT,
       MAP_BUTTON_STARTSELECT, ButtonMapOptions, -1, ControlHelpText),
     MENU_END_ITEMS
   },
@@ -449,8 +452,6 @@ void InitMenu()
   UiMetric.ScrollbarColor = PSP_COLOR_GRAY;
   UiMetric.ScrollbarBgColor = 0x44ffffff;
   UiMetric.ScrollbarWidth = 10;
-  UiMetric.DialogBorderColor = PSP_COLOR_GRAY;
-  UiMetric.DialogBgColor = PSP_COLOR_DARKGRAY;
   UiMetric.TextColor = PSP_COLOR_GRAY;
   UiMetric.SelectedColor = PSP_COLOR_YELLOW;
   UiMetric.SelectedBgColor = COLOR(0xff,0xff,0xff,0x44);
@@ -526,6 +527,8 @@ void DisplayMenu()
       pspMenuSelectOptionByValue(item, (void*)Options.ShowFps);
       item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_CONTROL_MODE);
       pspMenuSelectOptionByValue(item, (void*)Options.ControlMode);
+      item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_ANIMATE);
+      pspMenuSelectOptionByValue(item, (void*)UiMetric.Animate);
 
       pspUiOpenMenu(&OptionUiMenu, NULL);
       break;
@@ -591,14 +594,9 @@ int  OnSplashButtonPress(const struct PspUiSplash *splash,
 /* Handles drawing of generic items */
 void OnGenericRender(const void *uiobject, const void *item_obj)
 {
-  static char status[128];
-  pspUiGetStatusString(status, sizeof(status));
-
   /* Draw tabs */
   int height = pspFontGetLineHeight(UiMetric.Font);
-  int width = pspFontGetTextWidth(UiMetric.Font, status);
-  pspVideoPrint(UiMetric.Font, SCR_WIDTH - width, 0, status, PSP_COLOR_WHITE);
-
+  int width;
   int i, x;
   for (i = 0, x = 5; i <= TAB_MAX; i++, x += width + 10)
   {
@@ -715,6 +713,9 @@ int  OnMenuItemChanged(const struct PspUiMenu *uimenu,
         : PSP_CTRL_CIRCLE;
       UiMetric.CancelButton = (!(int)option->Value) ? PSP_CTRL_CIRCLE
         : PSP_CTRL_CROSS;
+      break;
+    case OPTION_ANIMATE:
+      UiMetric.Animate = (int)option->Value;
       break;
     }
   }
@@ -1083,6 +1084,7 @@ void LoadOptions()
   Options.ClockFreq = pspInitGetInt(init, "Video", "PSP Clock Frequency", 222);
   Options.ShowFps = pspInitGetInt(init, "Video", "Show FPS", 0);
   Options.ControlMode = pspInitGetInt(init, "Menu", "Control Mode", 0);
+  UiMetric.Animate = pspInitGetInt(init, "Menu", "Animate", 1);
   Options.VertStrip = pspInitGetInt(init, "Game", "Vertical Strip", 1);
   Options.SoundEngine = pspInitGetInt(init, "System", "FM Engine", SND_NULL);
   Options.SoundBoost = pspInitGetInt(init, "System", "Sound Boost", 0);
@@ -1112,6 +1114,7 @@ static int SaveOptions()
   pspInitSetInt(init, "Video", "PSP Clock Frequency",Options.ClockFreq);
   pspInitSetInt(init, "Video", "Show FPS", Options.ShowFps);
   pspInitSetInt(init, "Menu", "Control Mode", Options.ControlMode);
+  pspInitSetInt(init, "Menu", "Animate", UiMetric.Animate);
   pspInitSetInt(init, "Game", "Vertical Strip", Options.VertStrip);
   pspInitSetInt(init, "System", "FM Engine", Options.SoundEngine);
   pspInitSetInt(init, "System", "Sound Boost", Options.SoundBoost);

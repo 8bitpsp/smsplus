@@ -57,6 +57,9 @@ int       pspImageSavePng(const char *path, const PspImage* image);
 PspImage* pspImageLoadPngFd(FILE *fp);
 int       pspImageSavePngFd(FILE *fp, const PspImage* image);
 
+int pspImageBlur(const PspImage *original, PspImage *blurred);
+int pspImageDiscardColors(const PspImage *original);
+
 #ifdef __cplusplus
 }
 #endif

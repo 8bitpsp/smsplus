@@ -33,8 +33,6 @@ typedef struct PspUiMetric
   u32 ScrollbarColor;
   u32 ScrollbarBgColor;
   int ScrollbarWidth;
-  u32 DialogBorderColor;
-  u32 DialogBgColor;
   u32 TextColor;
   u32 SelectedColor;
   u32 SelectedBgColor;
@@ -58,6 +56,7 @@ typedef struct PspUiMetric
   int TitlePadding;
   u32 TitleColor;
   u32 TabBgColor;
+  int Animate;
 } PspUiMetric;
 
 typedef struct PspUiFileBrowser
@@ -102,14 +101,15 @@ typedef struct PspUiSplash
   const char* (*OnGetStatusBarText)(const struct PspUiSplash *splash);
 } PspUiSplash;
 
-#define PSP_UI_YES    2
-#define PSP_UI_NO     1
-#define PSP_UI_CANCEL 0
+#define PSP_UI_YES     2
+#define PSP_UI_NO      1
+#define PSP_UI_CANCEL  0
+
+#define PSP_UI_CONFIRM 1
 
 char pspUiGetButtonIcon(u32 button_mask);
 
-void pspUiOpenBrowser(PspUiFileBrowser *browser, 
-  const char *start_path);
+void pspUiOpenBrowser(PspUiFileBrowser *browser, const char *start_path);
 void pspUiOpenGallery(const PspUiGallery *gallery, const char *title);
 void pspUiOpenMenu(const PspUiMenu *uimenu, const char *title);
 void pspUiSplashScreen(PspUiSplash *splash);
@@ -120,7 +120,7 @@ void pspUiAlert(const char *message);
 void pspUiFlashMessage(const char *message);
 const PspMenuItem* pspUiSelect(const char *title, const PspMenu *menu);
 
-void pspUiGetStatusString(char *status, int length);
+void pspUiFadeout();
 
 PspUiMetric UiMetric;
 

@@ -40,12 +40,22 @@ extern "C" {
 #define SCR_WIDTH 480
 #define SCR_HEIGHT 272
 
-#define RGB(r,g,b) (((((b) >> 3) & 0x1F) << 10) | ((((g) >> 3) & 0x1F) << 5) | (((r) >> 3) & 0x1F) | 0x8000)
-#define RED(pixel) ((((pixel)) & 0x1f) * 0xff / 0x1f)
-#define GREEN(pixel) ((((pixel) >> 5)  & 0x1f) * 0xff / 0x1f)
-#define BLUE(pixel) ((((pixel) >> 10) & 0x1f) * 0xff / 0x1f)
+#define COLOR(r,g,b,a) (((int)(r)&0xff)|(((int)(g)&0xff)<<8)|\
+  (((int)(b)&0xff)<<16)|(((int)(a)&0xff)<<24))
 
-#define COLOR(r,g,b,a) (((int)(r)) | ((int)(g) << 8) | ((int)(b) << 16) | ((int)(a) << 24))
+#define RGB(r,g,b)   (((((b)>>3)&0x1F)<<10)|((((g)>>3)&0x1F)<<5)|\
+  (((r)>>3)&0x1F)|0x8000)
+#define RED(pixel)   ((((pixel))&0x1f)*0xff/0x1f)
+#define GREEN(pixel) ((((pixel)>>5)&0x1f)*0xff/0x1f)
+#define BLUE(pixel)  ((((pixel)>>10)&0x1f)*0xff/0x1f)
+
+#define RGB_32(r,g,b)    COLOR(r,g,b,0xff)
+#define RGBA_32(r,g,b,a) COLOR(r,g,b,a)
+
+#define RED_32(c)   ((c)&0xff)
+#define GREEN_32(c) (((c)>>8)&0xff)
+#define BLUE_32(c)  (((c)>>16)&0xff)
+#define ALPHA_32(c) (((c)>>24)&0xff)
 
 extern const unsigned int PspFontColor[];
 
@@ -54,7 +64,6 @@ typedef struct PspVertex
   unsigned int color;
   short x, y, z;
 } PspVertex;
-
 
 void pspVideoInit();
 void pspVideoShutdown();
@@ -83,6 +92,7 @@ void pspVideoShadowRect(int sx, int sy, int dx, int dy, u32 color, int depth);
 
 PspImage* pspVideoGetVramBufferCopy();
 
+void pspVideoBeginList(void *list);
 void pspVideoCallList(const void *list);
 
 void* pspVideoAllocateVramChunk(unsigned int bytes);
