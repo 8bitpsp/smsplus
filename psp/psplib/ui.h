@@ -114,11 +114,13 @@ void pspUiOpenGallery(const PspUiGallery *gallery, const char *title);
 void pspUiOpenMenu(const PspUiMenu *uimenu, const char *title);
 void pspUiSplashScreen(PspUiSplash *splash);
 
-int  pspUiConfirm(const char *message);
-int  pspUiYesNoCancel(const char *message);
-void pspUiAlert(const char *message);
-void pspUiFlashMessage(const char *message);
-const PspMenuItem* pspUiSelect(const char *title, const PspMenu *menu);
+int   pspUiConfirm(const char *message);
+int   pspUiYesNoCancel(const char *message);
+void  pspUiAlert(const char *message);
+void  pspUiFlashMessage(const char *message);
+const PspMenuItem* 
+      pspUiSelect(const char *title, const PspMenu *menu);
+char* pspUiInput(const char *prompt);
 
 void pspUiFadeout();
 

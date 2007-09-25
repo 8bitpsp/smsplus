@@ -216,7 +216,7 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
   }
 
   sceKernelDcacheWritebackAll();
-
+/*
   if (image->Depth != PSP_IMAGE_INDEXED &&
     dw == image->Viewport.Width && dh == image->Viewport.Height)
   {
@@ -227,6 +227,7 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
       BUF_WIDTH, (void *)(VRAM_START + (u32)VramOffset));
   }
   else
+*/
   {
     sceGuEnable(GU_TEXTURE_2D);
 
@@ -249,6 +250,7 @@ void pspVideoPutImage(const PspImage *image, int dx, int dy, int dw, int dh)
     end = image->Viewport.X + image->Viewport.Width;
     sc_end = dx + dw;
 
+    /* TODO: Convert to floating-point coords */
     for (; start < end; start += SLICE_SIZE, dx += slsz_scaled)
     {
       vertices = (struct TexVertex*)sceGuGetMemory(2 * sizeof(struct TexVertex));
@@ -518,15 +520,17 @@ PspImage* pspVideoGetVramBufferCopy()
     *vram_addr = (u16*)((u8*)VRAM_START + 0x40000000);
   PspImage *image;
 
-  if (!(image = pspImageCreate(SCR_WIDTH, SCR_HEIGHT, PSP_IMAGE_16BPP)))
+  if (!(image = pspImageCreate(BUF_WIDTH, SCR_HEIGHT, PSP_IMAGE_16BPP)))
     return NULL;
+
+  image->Viewport.Width = SCR_WIDTH;
 
   for (i = 0; i < image->Height; i++)
   {
-    for (j = 0; j < image->Width; j++)
+    for (j = 0; j < image->Viewport.Width; j++)
     {
       pixel = (unsigned short*)image->Pixels + (i * image->Width + j);
-      *pixel = *(vram_addr + (i * BUF_WIDTH + j));
+      *pixel = *(vram_addr + (i * BUF_WIDTH + j)) | 0x8000;
     }
   }
 

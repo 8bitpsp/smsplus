@@ -790,6 +790,10 @@ int  OnMenuButtonPress(const struct PspUiMenu *uimenu,
 int OnQuickloadOk(const void *browser, const void *path)
 {
   int first_time = 0;
+{
+char *foo=pspUiInput("groo");
+pspUiAlert(foo);
+}
 
   if (GameName)
   {
