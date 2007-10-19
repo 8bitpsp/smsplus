@@ -33,8 +33,8 @@ extern const int ButtonMapId[];
 extern struct ButtonConfig ActiveConfig;
 extern char *ScreenshotPath;
 
-inline int ParseInput();
-inline void RenderVideo();
+static inline int ParseInput();
+static inline void RenderVideo();
 void AudioCallback(void* buf, unsigned int *length, void *userdata);
 void MixerCallback(int16 **stream, int16 **output, int length);
 

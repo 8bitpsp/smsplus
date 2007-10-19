@@ -88,15 +88,14 @@ static const char *TabLabel[] =
 static void LoadOptions();
 static int  SaveOptions();
 
-static void DisplayStateTab();
-
 static void InitButtonConfig();
 static int  SaveButtonConfig();
 static int  LoadButtonConfig();
 
-PspImage*   LoadStateIcon(const char *path);
-int         LoadState(const char *path);
-PspImage*   SaveState(const char *path, PspImage *icon);
+static void        DisplayStateTab();
+static PspImage*   LoadStateIcon(const char *path);
+static int         LoadState(const char *path);
+static PspImage*   SaveState(const char *path, PspImage *icon);
 
 static int OnMenuItemChanged(const struct PspUiMenu *uimenu, PspMenuItem* item, 
   const PspMenuOption* option);
@@ -117,7 +116,7 @@ static int OnSaveStateOk(const void *gallery, const void *item);
 static int OnSaveStateButtonPress(const PspUiGallery *gallery, 
   PspMenuItem* item, u32 button_mask);
 
-int OnQuickloadOk(const void *browser, const void *path);
+static int OnQuickloadOk(const void *browser, const void *path);
 
 void OnSystemRender(const void *uiobject, const void *item_obj);
 
@@ -545,7 +544,12 @@ void DisplayMenu()
       pspCtrlSetPollingMode(PSP_CTRL_NORMAL);
 
       /* Resume emulation */
-      if (ResumeEmulation) RunEmulator();
+      if (ResumeEmulation)
+      {
+        if (UiMetric.Animate) pspUiFadeout();
+        RunEmulator();
+        if (UiMetric.Animate) pspUiFadeout();
+      }
     }
   } while (!ExitPSP);
 }
@@ -790,10 +794,6 @@ int  OnMenuButtonPress(const struct PspUiMenu *uimenu,
 int OnQuickloadOk(const void *browser, const void *path)
 {
   int first_time = 0;
-{
-char *foo=pspUiInput("groo");
-pspUiAlert(foo);
-}
 
   if (GameName)
   {
@@ -856,8 +856,7 @@ int OnSaveStateOk(const void *gallery, const void *item)
 }
 
 int OnSaveStateButtonPress(const PspUiGallery *gallery, 
-      PspMenuItem *sel, 
-      u32 button_mask)
+      PspMenuItem *sel, u32 button_mask)
 {
   if (!GameName) { TabIndex++; return 0; }
 
