@@ -17,7 +17,7 @@ PSP_EBOOT_ICON=$(DATA)/smsp-icon.png
 BUILD_PSPLIB=$(PSPLIB)/psp.o $(PSPLIB)/font.o $(PSPLIB)/image.o \
              $(PSPLIB)/video.o $(PSPLIB)/audio.o $(PSPLIB)/fileio.o \
              $(PSPLIB)/menu.o $(PSPLIB)/ui.o $(PSPLIB)/ctrl.o \
-             $(PSPLIB)/kybd.o $(PSPLIB)/perf.o $(PSPLIB)/util.o \
+             $(PSPLIB)/perf.o $(PSPLIB)/util.o \
              $(PSPLIB)/init.o
 BUILD_Z80=$(Z80)/z80.o
 BUILD_APP=sms.o	pio.o memz80.o render.o vdp.o \
