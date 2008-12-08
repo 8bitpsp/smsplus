@@ -12,6 +12,7 @@ void TrashEmulator();
 #define JOY 0x10000
 #define SYS 0x20000
 #define SPC 0x40000
+#define AFI 0x80000
 
 #define CODE_MASK(x) (x & 0xffff)
 
@@ -50,6 +51,7 @@ typedef struct
   int VertStrip;
   int SoundEngine;
   int SoundBoost;
+  int AutoFire;
 } EmulatorOptions;
 
 struct ButtonConfig

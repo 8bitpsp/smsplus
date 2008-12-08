@@ -4,9 +4,9 @@
 
 #include <pspkernel.h>
 
-#include "audio.h"
+#include "pl_snd.h"
 #include "video.h"
-#include "psp.h"
+#include "pl_psp.h"
 #include "ctrl.h"
 
 #include "menu.h"
@@ -22,14 +22,16 @@ static void ExitCallback(void* arg)
 int main(int argc,char *argv[])
 {
   /* Initialize PSP */
-  pspInit(argv[0]);
-  pspAudioInit(768);
+  pl_psp_init(argv[0]);
+  pl_snd_init(768, 1);
   pspCtrlInit();
   pspVideoInit();
 
   /* Initialize callbacks */
-  pspRegisterCallback(PSP_EXIT_CALLBACK, ExitCallback, NULL);
-  pspStartCallbackThread();
+  pl_psp_register_callback(PSP_EXIT_CALLBACK,
+                           ExitCallback,
+                           NULL);
+  pl_psp_start_callback_thread();
 
   /* Start emulation */
   InitMenu();
@@ -37,9 +39,9 @@ int main(int argc,char *argv[])
   TrashMenu();
 
   /* Release PSP resources */
-  pspAudioShutdown();
+  pl_snd_shutdown();
   pspVideoShutdown();
-  pspShutdown();
+  pl_psp_shutdown();
 
   return(0);
 }

@@ -15,14 +15,14 @@
 #include "state.h"
 #include "shared.h"
 
-#include "fileio.h"
+#include "pl_file.h"
 #include "image.h"
 #include "ui.h"
-#include "menu.h"
+#include "pl_menu.h"
 #include "ctrl.h"
-#include "psp.h"
-#include "util.h"
-#include "init.h"
+#include "pl_psp.h"
+#include "pl_util.h"
+#include "pl_ini.h"
 
 #define TAB_QUICKLOAD 0
 #define TAB_STATE     1
@@ -40,6 +40,7 @@
 #define OPTION_SHOW_FPS     6
 #define OPTION_CONTROL_MODE 7
 #define OPTION_ANIMATE      8
+#define OPTION_AUTOFIRE     9
 
 #define SYSTEM_SCRNSHOT     1
 #define SYSTEM_RESET        2
@@ -61,15 +62,15 @@ static const char *QuickloadFilter[] = { "SMS", "GG", "ZIP", '\0' },
   EmptySlotText[] = "\026\244\020 Save",
   ControlHelpText[] = "\026\250\020 Change mapping\t\026\001\020 Save to \271\t\026\243\020 Load defaults";
 
-static const char *ScreenshotDir = "screens";
-static const char *SaveStateDir = "savedata";
-static const char *ButtonConfigFile = "buttons";
-static const char *OptionsFile = "smsplus.ini";
+pl_file_path CurrentGame = "",
+             GamePath,
+             SaveStatePath,
+             ScreenshotPath;
 
-char *GameName;
-char *ScreenshotPath;
-static char *SaveStatePath;
-static char *GamePath;
+#define SET_AS_CURRENT_GAME(filename) \
+  strncpy(CurrentGame, filename, sizeof(CurrentGame) - 1)
+#define CURRENT_GAME (CurrentGame)
+#define GAME_LOADED (CurrentGame[0] != '\0')
 
 #define WIDTH  256
 #define HEIGHT 192
@@ -97,11 +98,11 @@ static PspImage*   LoadStateIcon(const char *path);
 static int         LoadState(const char *path);
 static PspImage*   SaveState(const char *path, PspImage *icon);
 
-static int OnMenuItemChanged(const struct PspUiMenu *uimenu, PspMenuItem* item, 
-  const PspMenuOption* option);
+static int OnMenuItemChanged(const struct PspUiMenu *uimenu, pl_menu_item* item, 
+  const pl_menu_option* option);
 static int OnMenuOk(const void *uimenu, const void* sel_item);
 static int OnMenuButtonPress(const struct PspUiMenu *uimenu, 
-  PspMenuItem* sel_item, u32 button_mask);
+  pl_menu_item* sel_item, u32 button_mask);
 
 static int OnSplashButtonPress(const struct PspUiSplash *splash, 
   u32 button_mask);
@@ -114,158 +115,156 @@ static int OnGenericButtonPress(const PspUiFileBrowser *browser,
 
 static int OnSaveStateOk(const void *gallery, const void *item);
 static int OnSaveStateButtonPress(const PspUiGallery *gallery, 
-  PspMenuItem* item, u32 button_mask);
+  pl_menu_item* item, u32 button_mask);
 
 static int OnQuickloadOk(const void *browser, const void *path);
 
 void OnSystemRender(const void *uiobject, const void *item_obj);
 
-/* Define various menu options */
-static const PspMenuOptionDef
-  SoundEngineOptions[] = {
-    MENU_OPTION("Disabled",      SND_NULL),
-    MENU_OPTION("Faster",        SND_YM2413),
-    MENU_OPTION("More accurate", SND_EMU2413),
-    MENU_END_OPTIONS
-  },
-  SoundBoostOptions[] = {
-    MENU_OPTION("Off", 0),
-    MENU_OPTION("2x",  1),
-    MENU_OPTION("4x",  2),
-    MENU_END_OPTIONS
-  },
-  ToggleOptions[] = {
-    MENU_OPTION("Disabled", 0),
-    MENU_OPTION("Enabled",  1),
-    MENU_END_OPTIONS
-  },
-  ScreenSizeOptions[] = {
-    MENU_OPTION("Actual size",              DISPLAY_MODE_UNSCALED),
-    MENU_OPTION("4:3 scaled (fit height)",  DISPLAY_MODE_FIT_HEIGHT),
-    MENU_OPTION("16:9 scaled (fit screen)", DISPLAY_MODE_FILL_SCREEN),
-    MENU_END_OPTIONS
-  },
-  FrameLimitOptions[] = {
-    MENU_OPTION("Disabled",      0),
-    MENU_OPTION("60 fps (NTSC)", 60),
-    MENU_END_OPTIONS
-  },
-  FrameSkipOptions[] = {
-    MENU_OPTION("No skipping",  0),
-    MENU_OPTION("Skip 1 frame", 1),
-    MENU_OPTION("Skip 2 frames",2),
-    MENU_OPTION("Skip 3 frames",3),
-    MENU_OPTION("Skip 4 frames",4),
-    MENU_OPTION("Skip 5 frames",5),
-    MENU_END_OPTIONS
-  },
-  PspClockFreqOptions[] = {
-    MENU_OPTION("222 MHz", 222),
-    MENU_OPTION("266 MHz", 266),
-    MENU_OPTION("300 MHz", 300),
-    MENU_OPTION("333 MHz", 333),
-    MENU_END_OPTIONS
-  },
-  ControlModeOptions[] = {
-    MENU_OPTION("\026\242\020 cancels, \026\241\020 confirms (US)",    0),
-    MENU_OPTION("\026\241\020 cancels, \026\242\020 confirms (Japan)", 1),
-    MENU_END_OPTIONS
-  },
-  ButtonMapOptions[] = {
-    /* Unmapped */
-    MENU_OPTION("None", 0),
-    /* Special */
-    MENU_OPTION("Special: Open Menu", SPC|SPC_MENU),
-    /* Joystick */
-    MENU_OPTION("Joystick Up",    JOY|INPUT_UP),
-    MENU_OPTION("Joystick Down",  JOY|INPUT_DOWN),
-    MENU_OPTION("Joystick Left",  JOY|INPUT_LEFT),
-    MENU_OPTION("Joystick Right", JOY|INPUT_RIGHT),
-    MENU_OPTION("Joystick Button I",  JOY|INPUT_BUTTON1),
-    MENU_OPTION("Joystick Button II", JOY|INPUT_BUTTON2),
-    /* Joystick */
-    MENU_OPTION("Start (GG) / Pause (SMS)", SYS|INPUT_START|INPUT_PAUSE),
-    MENU_OPTION("Soft Reset (SMS)", SYS|INPUT_RESET),
-    MENU_END_OPTIONS
-  };
+/* Menu options */
+PL_MENU_OPTIONS_BEGIN(SoundEngineOptions)
+  PL_MENU_OPTION("Disabled",      SND_NULL)
+  PL_MENU_OPTION("Faster",        SND_YM2413)
+  PL_MENU_OPTION("More accurate", SND_EMU2413)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(SoundBoostOptions)
+  PL_MENU_OPTION("Off", 0)
+  PL_MENU_OPTION("2x",  1)
+  PL_MENU_OPTION("4x",  2)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(ToggleOptions)
+  PL_MENU_OPTION("Disabled", 0)
+  PL_MENU_OPTION("Enabled",  1)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(ScreenSizeOptions)
+  PL_MENU_OPTION("Actual size",              DISPLAY_MODE_UNSCALED)
+  PL_MENU_OPTION("4:3 scaled (fit height)",  DISPLAY_MODE_FIT_HEIGHT)
+  PL_MENU_OPTION("16:9 scaled (fit screen)", DISPLAY_MODE_FILL_SCREEN)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(FrameLimitOptions)
+  PL_MENU_OPTION("Disabled",      0)
+  PL_MENU_OPTION("60 fps (NTSC)", 60)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(FrameSkipOptions)
+  PL_MENU_OPTION("No skipping",   0)
+  PL_MENU_OPTION("Skip 1 frame",  1)
+  PL_MENU_OPTION("Skip 2 frames", 2)
+  PL_MENU_OPTION("Skip 3 frames", 3)
+  PL_MENU_OPTION("Skip 4 frames", 4)
+  PL_MENU_OPTION("Skip 5 frames", 5)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(PspClockFreqOptions)
+  PL_MENU_OPTION("222 MHz", 222)
+  PL_MENU_OPTION("266 MHz", 266)
+  PL_MENU_OPTION("300 MHz", 300)
+  PL_MENU_OPTION("333 MHz", 333)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(AutofireOptions)
+  PL_MENU_OPTION("Once every 3 frames", 2)
+  PL_MENU_OPTION("Once every 10 frames", 9)
+  PL_MENU_OPTION("Once every 30 frames", 29)
+  PL_MENU_OPTION("Once every 60 frames", 59)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(ControlModeOptions)
+  PL_MENU_OPTION("\026\242\020 cancels, \026\241\020 confirms (US)",    0)
+  PL_MENU_OPTION("\026\241\020 cancels, \026\242\020 confirms (Japan)", 1)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(ButtonMapOptions)
+  /* Unmapped */
+  PL_MENU_OPTION("None", 0)
+  /* Special */
+  PL_MENU_OPTION("Special: Open Menu", SPC|SPC_MENU)
+  /* Joystick */
+  PL_MENU_OPTION("Joystick Up",    JOY|INPUT_UP)
+  PL_MENU_OPTION("Joystick Down",  JOY|INPUT_DOWN)
+  PL_MENU_OPTION("Joystick Left",  JOY|INPUT_LEFT)
+  PL_MENU_OPTION("Joystick Right", JOY|INPUT_RIGHT)
+  PL_MENU_OPTION("Joystick Button I",  JOY|INPUT_BUTTON1)
+  PL_MENU_OPTION("Joystick Button II", JOY|INPUT_BUTTON2)
+  PL_MENU_OPTION("Joystick Button I (autofire)",  AFI|INPUT_BUTTON1)
+  PL_MENU_OPTION("Joystick Button II (autofire)", AFI|INPUT_BUTTON2)
+  /* Joystick */
+  PL_MENU_OPTION("Start (GG) / Pause (SMS)", SYS|INPUT_START|INPUT_PAUSE)
+  PL_MENU_OPTION("Soft Reset (SMS)", SYS|INPUT_RESET)
+PL_MENU_OPTIONS_END
 
-static const PspMenuItemDef
-  OptionMenuDef[] = {
-    MENU_HEADER("Video"),
-    MENU_ITEM("Screen size", OPTION_DISPLAY_MODE, ScreenSizeOptions, -1,
-      "\026\250\020 Change screen size"),
-    MENU_HEADER("Performance"),
-    MENU_ITEM("Frame limiter", OPTION_SYNC_FREQ, FrameLimitOptions, -1, 
-      "\026\250\020 Change screen update frequency"),
-    MENU_ITEM("Frame skipping", OPTION_FRAMESKIP, FrameSkipOptions, -1, 
-      "\026\250\020 Change number of frames skipped per update"),
-    MENU_ITEM("VSync", OPTION_VSYNC, ToggleOptions, -1,
-      "\026\250\020 Enable to reduce tearing; disable to increase speed"),
-    MENU_ITEM("PSP clock frequency", OPTION_CLOCK_FREQ, PspClockFreqOptions, -1,
-      "\026\250\020 Larger values: faster emulation, faster battery depletion (default: 222MHz)"),
-    MENU_ITEM("Show FPS counter",    OPTION_SHOW_FPS, ToggleOptions, -1,
-      "\026\250\020 Show/hide the frames-per-second counter"),
-    MENU_HEADER("Menu"),
-    MENU_ITEM("Button mode", OPTION_CONTROL_MODE, ControlModeOptions,  -1, 
-      "\026\250\020 Change OK and Cancel button mapping"),
-    MENU_ITEM("Animations", OPTION_ANIMATE, ToggleOptions,  -1, 
-      "\026\250\020 Enable/disable in-menu animations"),
-    MENU_END_ITEMS
-  },
-  ControlMenuDef[] = {
-    MENU_ITEM(PSP_CHAR_ANALUP, MAP_ANALOG_UP, ButtonMapOptions, -1, 
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_ANALDOWN, MAP_ANALOG_DOWN, ButtonMapOptions, -1, 
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_ANALLEFT, MAP_ANALOG_LEFT, ButtonMapOptions, -1,
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_ANALRIGHT, MAP_ANALOG_RIGHT, ButtonMapOptions, -1,
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_UP, MAP_BUTTON_UP, ButtonMapOptions, -1, 
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_DOWN, MAP_BUTTON_DOWN, ButtonMapOptions, -1, 
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_LEFT, MAP_BUTTON_LEFT, ButtonMapOptions, -1,
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_RIGHT, MAP_BUTTON_RIGHT, ButtonMapOptions, -1,
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_SQUARE, MAP_BUTTON_SQUARE, ButtonMapOptions, -1,
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_CROSS, MAP_BUTTON_CROSS, ButtonMapOptions, -1,
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_CIRCLE, MAP_BUTTON_CIRCLE, ButtonMapOptions, -1,
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_TRIANGLE, MAP_BUTTON_TRIANGLE, ButtonMapOptions, 
-      -1, ControlHelpText),
-    MENU_ITEM(PSP_CHAR_LTRIGGER, MAP_BUTTON_LTRIGGER, ButtonMapOptions, 
-      -1, ControlHelpText),
-    MENU_ITEM(PSP_CHAR_RTRIGGER, MAP_BUTTON_RTRIGGER, ButtonMapOptions, 
-      -1, ControlHelpText),
-    MENU_ITEM(PSP_CHAR_SELECT, MAP_BUTTON_SELECT, ButtonMapOptions, 
-      -1, ControlHelpText),
-    MENU_ITEM(PSP_CHAR_START, MAP_BUTTON_START, ButtonMapOptions, -1, 
-      ControlHelpText),
-    MENU_ITEM(PSP_CHAR_LTRIGGER"+"PSP_CHAR_RTRIGGER, 
-      MAP_BUTTON_LRTRIGGERS, ButtonMapOptions, -1, ControlHelpText),
-    MENU_ITEM(PSP_CHAR_START"+"PSP_CHAR_SELECT,
-      MAP_BUTTON_STARTSELECT, ButtonMapOptions, -1, ControlHelpText),
-    MENU_END_ITEMS
-  },
-  SystemMenuDef[] = {
-    MENU_HEADER("Audio"),
-    MENU_ITEM("FM Emulation", SYSTEM_SOUND_ENGINE, SoundEngineOptions, -1,
-      "\026\250\020 Select FM emulation engine"),
-    MENU_ITEM("Sound Boost", SYSTEM_SOUND_BOOST, SoundBoostOptions, -1,
-      "\026\250\020 Adjust volume scaling factor"),
-    MENU_HEADER("Video"),
-    MENU_ITEM("Vertical bar", SYSTEM_VERT_STRIP, ToggleOptions, -1,
-      "\026\250\020 Show/hide the leftmost vertical bar (SMS)"),
-    MENU_HEADER("System"),
-    MENU_ITEM("Reset", SYSTEM_RESET, NULL, -1, "\026\001\020 Reset"),
-    MENU_ITEM("Save screenshot",  SYSTEM_SCRNSHOT, NULL, -1, 
-      "\026\001\020 Save screenshot"),
-    MENU_END_ITEMS
-  };
+/* Menu items */
+PL_MENU_ITEMS_BEGIN(OptionMenuDef)
+  PL_MENU_HEADER("Video")
+  PL_MENU_ITEM("Screen size", OPTION_DISPLAY_MODE, ScreenSizeOptions,
+               "\026\250\020 Change screen size")
+  PL_MENU_HEADER("Input")
+  PL_MENU_ITEM("Rate of autofire", OPTION_AUTOFIRE, AutofireOptions, 
+               "\026\250\020 Adjust rate of autofire")
+  PL_MENU_HEADER("Performance")
+  PL_MENU_ITEM("Frame limiter", OPTION_SYNC_FREQ, FrameLimitOptions,
+               "\026\250\020 Change screen update frequency")
+  PL_MENU_ITEM("Frame skipping", OPTION_FRAMESKIP, FrameSkipOptions,
+               "\026\250\020 Change number of frames skipped per update")
+  PL_MENU_ITEM("VSync", OPTION_VSYNC, ToggleOptions,
+               "\026\250\020 Enable to reduce tearing; disable to increase speed")
+  PL_MENU_ITEM("PSP clock frequency", OPTION_CLOCK_FREQ, PspClockFreqOptions,
+               "\026\250\020 Larger values: faster emulation, faster battery depletion (default: 222MHz)")
+  PL_MENU_ITEM("Show FPS counter",    OPTION_SHOW_FPS, ToggleOptions,
+               "\026\250\020 Show/hide the frames-per-second counter")
+  PL_MENU_HEADER("Menu")
+  PL_MENU_ITEM("Button mode", OPTION_CONTROL_MODE, ControlModeOptions,
+               "\026\250\020 Change OK and Cancel button mapping")
+  PL_MENU_ITEM("Animations", OPTION_ANIMATE, ToggleOptions, 
+               "\026\250\020 Enable/disable in-menu animations")
+PL_MENU_ITEMS_END
+PL_MENU_ITEMS_BEGIN(ControlMenuDef)
+    PL_MENU_ITEM(PSP_CHAR_ANALUP, MAP_ANALOG_UP, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_ANALDOWN, MAP_ANALOG_DOWN, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_ANALLEFT, MAP_ANALOG_LEFT, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_ANALRIGHT, MAP_ANALOG_RIGHT, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_UP, MAP_BUTTON_UP, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_DOWN, MAP_BUTTON_DOWN, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_LEFT, MAP_BUTTON_LEFT, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_RIGHT, MAP_BUTTON_RIGHT, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_SQUARE, MAP_BUTTON_SQUARE, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_CROSS, MAP_BUTTON_CROSS, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_CIRCLE, MAP_BUTTON_CIRCLE, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_TRIANGLE, MAP_BUTTON_TRIANGLE, ButtonMapOptions, 
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_LTRIGGER, MAP_BUTTON_LTRIGGER, ButtonMapOptions, 
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_RTRIGGER, MAP_BUTTON_RTRIGGER, ButtonMapOptions, 
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_SELECT, MAP_BUTTON_SELECT, ButtonMapOptions, 
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_START, MAP_BUTTON_START, ButtonMapOptions,
+      ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_LTRIGGER"+"PSP_CHAR_RTRIGGER, 
+      MAP_BUTTON_LRTRIGGERS, ButtonMapOptions, ControlHelpText)
+    PL_MENU_ITEM(PSP_CHAR_START"+"PSP_CHAR_SELECT,
+      MAP_BUTTON_STARTSELECT, ButtonMapOptions, ControlHelpText)
+PL_MENU_ITEMS_END
+PL_MENU_ITEMS_BEGIN(SystemMenuDef)
+  PL_MENU_HEADER("Audio")
+  PL_MENU_ITEM("FM Emulation", SYSTEM_SOUND_ENGINE, SoundEngineOptions,
+    "\026\250\020 Select FM emulation engine")
+  PL_MENU_ITEM("Sound Boost", SYSTEM_SOUND_BOOST, SoundBoostOptions,
+    "\026\250\020 Adjust volume scaling factor")
+  PL_MENU_HEADER("Video")
+  PL_MENU_ITEM("Vertical bar", SYSTEM_VERT_STRIP, ToggleOptions,
+    "\026\250\020 Show/hide the leftmost vertical bar (SMS)")
+  PL_MENU_HEADER("System")
+  PL_MENU_ITEM("Reset", SYSTEM_RESET, NULL, "\026\001\020 Reset")
+  PL_MENU_ITEM("Save screenshot",  SYSTEM_SCRNSHOT, NULL,
+    "\026\001\020 Save screenshot")
+PL_MENU_ITEMS_END
 
 PspUiSplash SplashScreen =
 {
@@ -277,7 +276,6 @@ PspUiSplash SplashScreen =
 
 PspUiGallery SaveStateGallery = 
 {
-  NULL,                        /* PspMenu */
   OnGenericRender,             /* OnRender() */
   OnSaveStateOk,               /* OnOk() */
   OnGenericCancel,             /* OnCancel() */
@@ -287,7 +285,6 @@ PspUiGallery SaveStateGallery =
 
 PspUiMenu OptionUiMenu =
 {
-  NULL,                  /* PspMenu */
   OnGenericRender,       /* OnRender() */
   OnMenuOk,              /* OnOk() */
   OnGenericCancel,       /* OnCancel() */
@@ -297,7 +294,6 @@ PspUiMenu OptionUiMenu =
 
 PspUiMenu ControlUiMenu =
 {
-  NULL,                  /* PspMenu */
   OnGenericRender,       /* OnRender() */
   OnMenuOk,              /* OnOk() */
   OnGenericCancel,       /* OnCancel() */
@@ -317,7 +313,6 @@ PspUiFileBrowser QuickloadBrowser =
 
 PspUiMenu SystemUiMenu =
 {
-  NULL,                  /* PspMenu */
   OnSystemRender,        /* OnRender() */
   OnMenuOk,              /* OnOk() */
   OnGenericCancel,       /* OnCancel() */
@@ -391,8 +386,6 @@ void InitMenu()
   /* Reset variables */
   TabIndex = TAB_ABOUT;
   Background = NULL;
-  GameName = NULL;
-  GamePath = NULL;
 
   /* Initialize options */
   LoadOptions();
@@ -403,38 +396,27 @@ void InitMenu()
   Background = pspImageLoadPng("background.png");
 
   /* Init NoSaveState icon image */
-  NoSaveIcon=pspImageCreate(136, 114, PSP_IMAGE_16BPP);
-  pspImageClear(NoSaveIcon, RGB(0x0c,0,0x3f));
+  NoSaveIcon = pspImageCreate(160, 152, PSP_IMAGE_16BPP);
+  pspImageClear(NoSaveIcon, RGB(0x44,0x00,0x00));
 
   /* Initialize state menu */
-  SaveStateGallery.Menu = pspMenuCreate();
   int i;
-  PspMenuItem *item;
+  pl_menu_item *item;
   for (i = 0; i < 10; i++)
   {
-    item = pspMenuAppendItem(SaveStateGallery.Menu, NULL, i);
-    pspMenuSetHelpText(item, EmptySlotText);
+    item = pl_menu_append_item(&SaveStateGallery.Menu, i, NULL);
+    pl_menu_set_item_help_text(item, EmptySlotText);
   }
 
-  /* Initialize options menu */
-  OptionUiMenu.Menu = pspMenuCreate();
-  pspMenuLoad(OptionUiMenu.Menu, OptionMenuDef);
-
-  /* Initialize control menu */
-  ControlUiMenu.Menu = pspMenuCreate();
-  pspMenuLoad(ControlUiMenu.Menu, ControlMenuDef);
-
-  /* Initialize system menu */
-  SystemUiMenu.Menu = pspMenuCreate();
-  pspMenuLoad(SystemUiMenu.Menu, SystemMenuDef);
+  /* Initialize menus */
+  pl_menu_create(&SystemUiMenu.Menu, SystemMenuDef);
+  pl_menu_create(&OptionUiMenu.Menu, OptionMenuDef);
+  pl_menu_create(&ControlUiMenu.Menu, ControlMenuDef);
 
   /* Initialize paths */
-  SaveStatePath 
-    = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(SaveStateDir) + 2));
-  sprintf(SaveStatePath, "%s%s/", pspGetAppDirectory(), SaveStateDir);
-  ScreenshotPath 
-    = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(ScreenshotDir) + 2));
-  sprintf(ScreenshotPath, "%s%s/", pspGetAppDirectory(), ScreenshotDir);
+  sprintf(SaveStatePath, "%ssavedata/", pl_psp_get_app_directory());
+  sprintf(ScreenshotPath, "ms0:/PSP/PHOTO/%s/", PSP_APP_NAME);
+  sprintf(GamePath, "%s", pl_psp_get_app_directory());
 
   /* Load default configuration */
   LoadButtonConfig();
@@ -469,12 +451,14 @@ void InitMenu()
   UiMetric.TitleColor = PSP_COLOR_WHITE;
   UiMetric.MenuFps = 30;
   UiMetric.TabBgColor = COLOR(0x74,0x74,0xbe,0xff);
+  UiMetric.BrowserScreenshotPath = ScreenshotPath;
+  UiMetric.BrowserScreenshotDelay = 30;
 }
 
 void DisplayMenu()
 {
   int i;
-  PspMenuItem *item;
+  pl_menu_item *item;
 
   /* Menu loop */
   do
@@ -482,7 +466,7 @@ void DisplayMenu()
     ResumeEmulation = 0;
 
     /* Set normal clock frequency */
-    pspSetClockFrequency(222);
+    pl_psp_set_clock_freq(222);
     /* Set buttons to autorepeat */
     pspCtrlSetPollingMode(PSP_CTRL_AUTOREPEAT);
 
@@ -494,40 +478,43 @@ void DisplayMenu()
       break;
     case TAB_CONTROL:
       /* Load current button mappings */
-      for (item = ControlUiMenu.Menu->First, i = 0; item; item = item->Next, i++)
-        pspMenuSelectOptionByValue(item, (void*)ActiveConfig.ButtonMap[i]);
+      for (item = ControlUiMenu.Menu.items, i = 0; item; item = item->next, i++)
+        pl_menu_select_option_by_value(item, (void*)ActiveConfig.ButtonMap[i]);
       pspUiOpenMenu(&ControlUiMenu, NULL);
       break;
     case TAB_QUICKLOAD:
-      pspUiOpenBrowser(&QuickloadBrowser, (GameName) ? GameName : GamePath);
+      pspUiOpenBrowser(&QuickloadBrowser,
+                      (GAME_LOADED) ? CURRENT_GAME : GamePath);
       break;
     case TAB_SYSTEM:
-      item = pspMenuFindItemById(SystemUiMenu.Menu, SYSTEM_VERT_STRIP);
-      pspMenuSelectOptionByValue(item, (void*)Options.VertStrip);
-      item = pspMenuFindItemById(SystemUiMenu.Menu, SYSTEM_SOUND_ENGINE);
-      pspMenuSelectOptionByValue(item, (void*)Options.SoundEngine);
-      item = pspMenuFindItemById(SystemUiMenu.Menu, SYSTEM_SOUND_BOOST);
-      pspMenuSelectOptionByValue(item, (void*)Options.SoundBoost);
+      item = pl_menu_find_item_by_id(&SystemUiMenu.Menu, SYSTEM_VERT_STRIP);
+      pl_menu_select_option_by_value(item, (void*)Options.VertStrip);
+      item = pl_menu_find_item_by_id(&SystemUiMenu.Menu, SYSTEM_SOUND_ENGINE);
+      pl_menu_select_option_by_value(item, (void*)Options.SoundEngine);
+      item = pl_menu_find_item_by_id(&SystemUiMenu.Menu, SYSTEM_SOUND_BOOST);
+      pl_menu_select_option_by_value(item, (void*)Options.SoundBoost);
       pspUiOpenMenu(&SystemUiMenu, NULL);
       break;
     case TAB_OPTION:
       /* Init menu options */
-      item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_DISPLAY_MODE);
-      pspMenuSelectOptionByValue(item, (void*)Options.DisplayMode);
-      item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_SYNC_FREQ);
-      pspMenuSelectOptionByValue(item, (void*)Options.UpdateFreq);
-      item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_FRAMESKIP);
-      pspMenuSelectOptionByValue(item, (void*)(int)Options.Frameskip);
-      item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_VSYNC);
-      pspMenuSelectOptionByValue(item, (void*)Options.VSync);
-      item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_CLOCK_FREQ);
-      pspMenuSelectOptionByValue(item, (void*)Options.ClockFreq);
-      item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_SHOW_FPS);
-      pspMenuSelectOptionByValue(item, (void*)Options.ShowFps);
-      item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_CONTROL_MODE);
-      pspMenuSelectOptionByValue(item, (void*)Options.ControlMode);
-      item = pspMenuFindItemById(OptionUiMenu.Menu, OPTION_ANIMATE);
-      pspMenuSelectOptionByValue(item, (void*)UiMetric.Animate);
+      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_DISPLAY_MODE);
+      pl_menu_select_option_by_value(item, (void*)Options.DisplayMode);
+      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_SYNC_FREQ);
+      pl_menu_select_option_by_value(item, (void*)Options.UpdateFreq);
+      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_FRAMESKIP);
+      pl_menu_select_option_by_value(item, (void*)(int)Options.Frameskip);
+      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_VSYNC);
+      pl_menu_select_option_by_value(item, (void*)Options.VSync);
+      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_CLOCK_FREQ);
+      pl_menu_select_option_by_value(item, (void*)Options.ClockFreq);
+      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_SHOW_FPS);
+      pl_menu_select_option_by_value(item, (void*)Options.ShowFps);
+      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_CONTROL_MODE);
+      pl_menu_select_option_by_value(item, (void*)Options.ControlMode);
+      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_ANIMATE);
+      pl_menu_select_option_by_value(item, (void*)UiMetric.Animate);
+      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_AUTOFIRE);
+      pl_menu_select_option_by_value(item, (void*)Options.AutoFire);
 
       pspUiOpenMenu(&OptionUiMenu, NULL);
       break;
@@ -539,7 +526,7 @@ void DisplayMenu()
     if (!ExitPSP)
     {
       /* Set clock frequency during emulation */
-      pspSetClockFrequency(Options.ClockFreq);
+      pl_psp_set_clock_freq(Options.ClockFreq);
       /* Set buttons to normal mode */
       pspCtrlSetPollingMode(PSP_CTRL_NORMAL);
 
@@ -556,7 +543,7 @@ void DisplayMenu()
 
 int OnGenericCancel(const void *uiobject, const void* param)
 {
-  if (GameName) ResumeEmulation = 1;
+  if (GAME_LOADED) ResumeEmulation = 1;
   return 1;
 }
 
@@ -606,7 +593,7 @@ void OnGenericRender(const void *uiobject, const void *item_obj)
   {
     width = -10;
 
-    if (!GameName && (i == TAB_STATE || i == TAB_SYSTEM))
+    if (!GAME_LOADED && (i == TAB_STATE || i == TAB_SYSTEM))
       continue;
 
     /* Determine width of text */
@@ -633,7 +620,7 @@ int OnGenericButtonPress(const PspUiFileBrowser *browser,
     do
     {
       tab_index = TabIndex;
-      if (!GameName && (TabIndex == TAB_STATE || TabIndex == TAB_SYSTEM)) TabIndex--;
+      if (!GAME_LOADED && (TabIndex == TAB_STATE || TabIndex == TAB_SYSTEM)) TabIndex--;
       if (TabIndex < 0) TabIndex = TAB_MAX;
     } while (tab_index != TabIndex);
   }
@@ -643,14 +630,14 @@ int OnGenericButtonPress(const PspUiFileBrowser *browser,
     do
     {
       tab_index = TabIndex;
-      if (!GameName && (TabIndex == TAB_STATE || TabIndex == TAB_SYSTEM)) TabIndex++;
+      if (!GAME_LOADED && (TabIndex == TAB_STATE || TabIndex == TAB_SYSTEM)) TabIndex++;
       if (TabIndex > TAB_MAX) TabIndex = 0;
     } while (tab_index != TabIndex);
   }
   else if ((button_mask & (PSP_CTRL_START | PSP_CTRL_SELECT)) 
     == (PSP_CTRL_START | PSP_CTRL_SELECT))
   {
-    if (pspUtilSaveVramSeq(ScreenshotPath, "ui"))
+    if (pl_util_save_vram_seq(ScreenshotPath, "ui"))
       pspUiAlert("Saved successfully");
     else
       pspUiAlert("ERROR: Not saved");
@@ -662,64 +649,67 @@ int OnGenericButtonPress(const PspUiFileBrowser *browser,
 }
 
 int  OnMenuItemChanged(const struct PspUiMenu *uimenu, 
-  PspMenuItem* item, const PspMenuOption* option)
+  pl_menu_item* item, const pl_menu_option* option)
 {
   if (uimenu == &ControlUiMenu)
   {
-    ActiveConfig.ButtonMap[item->ID] = (unsigned int)option->Value;
+    ActiveConfig.ButtonMap[item->id] = (unsigned int)option->value;
   }
   else if (uimenu == &SystemUiMenu)
   {
-    switch(item->ID)
+    switch(item->id)
     {
     case SYSTEM_VERT_STRIP:
-      Options.VertStrip = (int)option->Value;
+      Options.VertStrip = (int)option->value;
       break;
     case SYSTEM_SOUND_ENGINE:
-      if (Options.SoundEngine != (int)option->Value)
+      if (Options.SoundEngine != (int)option->value)
       {
         pspUiFlashMessage("Initializing sound\nPlease wait...");
         sound_shutdown();
-        snd.fm_which = (Options.SoundEngine = (int)option->Value);
+        snd.fm_which = (Options.SoundEngine = (int)option->value);
         sound_init();
       }
       break;
     case SYSTEM_SOUND_BOOST:
-      Options.SoundBoost = (int)option->Value;
+      Options.SoundBoost = (int)option->value;
       break;
     }
   }
   else if (uimenu == &OptionUiMenu)
   {
-    switch(item->ID)
+    switch(item->id)
     {
     case OPTION_DISPLAY_MODE:
-      Options.DisplayMode = (int)option->Value;
+      Options.DisplayMode = (int)option->value;
       break;
     case OPTION_SYNC_FREQ:
-      Options.UpdateFreq = (int)option->Value;
+      Options.UpdateFreq = (int)option->value;
       break;
     case OPTION_FRAMESKIP:
-      Options.Frameskip = (int)option->Value;
+      Options.Frameskip = (int)option->value;
       break;
     case OPTION_VSYNC:
-      Options.VSync = (int)option->Value;
+      Options.VSync = (int)option->value;
       break;
     case OPTION_CLOCK_FREQ:
-      Options.ClockFreq = (int)option->Value;
+      Options.ClockFreq = (int)option->value;
       break;
     case OPTION_SHOW_FPS:
-      Options.ShowFps = (int)option->Value;
+      Options.ShowFps = (int)option->value;
       break;
     case OPTION_CONTROL_MODE:
-      Options.ControlMode = (int)option->Value;
-      UiMetric.OkButton = (!(int)option->Value) ? PSP_CTRL_CROSS
+      Options.ControlMode = (int)option->value;
+      UiMetric.OkButton = (!(int)option->value) ? PSP_CTRL_CROSS
         : PSP_CTRL_CIRCLE;
-      UiMetric.CancelButton = (!(int)option->Value) ? PSP_CTRL_CIRCLE
+      UiMetric.CancelButton = (!(int)option->value) ? PSP_CTRL_CIRCLE
         : PSP_CTRL_CROSS;
       break;
     case OPTION_ANIMATE:
-      UiMetric.Animate = (int)option->Value;
+      UiMetric.Animate = (int)option->value;
+      break;
+    case OPTION_AUTOFIRE:
+      Options.AutoFire = (int)option->value;
       break;
     }
   }
@@ -739,7 +729,7 @@ int OnMenuOk(const void *uimenu, const void* sel_item)
   }
   else if (uimenu == &SystemUiMenu)
   {
-    switch (((const PspMenuItem*)sel_item)->ID)
+    switch (((const pl_menu_item*)sel_item)->id)
     {
     case SYSTEM_RESET:
 
@@ -755,7 +745,9 @@ int OnMenuOk(const void *uimenu, const void* sel_item)
     case SYSTEM_SCRNSHOT:
 
       /* Save screenshot */
-      if (!pspUtilSavePngSeq(ScreenshotPath, pspFileIoGetFilename(GameName), Screen))
+      if (!pl_util_save_image_seq(ScreenshotPath,
+                                  pl_file_get_filename(CURRENT_GAME),
+                                  Screen))
         pspUiAlert("ERROR: Screenshot not saved");
       else
         pspUiAlert("Screenshot saved successfully");
@@ -766,23 +758,23 @@ int OnMenuOk(const void *uimenu, const void* sel_item)
   return 0;
 }
 
-int  OnMenuButtonPress(const struct PspUiMenu *uimenu, 
-  PspMenuItem* sel_item, 
+int OnMenuButtonPress(const struct PspUiMenu *uimenu, 
+  pl_menu_item* sel_item, 
   u32 button_mask)
 {
   if (uimenu == &ControlUiMenu)
   {
     if (button_mask & PSP_CTRL_TRIANGLE)
     {
-      PspMenuItem *item;
+      pl_menu_item *item;
       int i;
 
       /* Load default mapping */
       InitButtonConfig();
 
       /* Modify the menu */
-      for (item = ControlUiMenu.Menu->First, i = 0; item; item = item->Next, i++)
-        pspMenuSelectOptionByValue(item, (void*)DefaultConfig.ButtonMap[i]);
+      for (item = ControlUiMenu.Menu.items, i = 0; item; item = item->next, i++)
+        pl_menu_select_option_by_value(item, (void*)DefaultConfig.ButtonMap[i]);
 
       return 0;
     }
@@ -795,23 +787,23 @@ int OnQuickloadOk(const void *browser, const void *path)
 {
   int first_time = 0;
 
-  if (GameName)
-  {
-    free(GameName);
+  if (GAME_LOADED)
     system_poweroff();
-  }
   else first_time = 1;
 
-  if (!load_rom(path))
+  if (!load_rom((char*)path))
   {
     pspUiAlert("Error loading cartridge");
     return 0;
   }
 
-  GameName = strdup(path);
+  SET_AS_CURRENT_GAME((char*)path);
+  pl_file_get_parent_directory((const char*)path,
+                               GamePath,
+                               sizeof(GamePath));
 
-  if (GamePath) free(GamePath);
-  GamePath = pspFileIoGetParentDirectory(GameName);
+  /* Reset selected state */
+  SaveStateGallery.Menu.selected = NULL;
 
   if (first_time)
   {
@@ -828,22 +820,23 @@ int OnQuickloadOk(const void *browser, const void *path)
 
 int OnSaveStateOk(const void *gallery, const void *item)
 {
-  if (!GameName) { TabIndex++; return 0; }
+  if (!GAME_LOADED) 
+    return 0;
 
   char *path;
-  const char *config_name = pspFileIoGetFilename(GameName);
+  const char *config_name = pl_file_get_filename(CURRENT_GAME);
 
   path = (char*)malloc(strlen(SaveStatePath) + strlen(config_name) + 8);
   sprintf(path, "%s%s.s%02i", SaveStatePath, config_name,
-    ((const PspMenuItem*)item)->ID);
+    ((const pl_menu_item*)item)->id);
 
-  if (pspFileIoCheckIfExists(path) && pspUiConfirm("Load state?"))
+  if (pl_file_exists(path) && pspUiConfirm("Load state?"))
   {
     if (LoadState(path))
     {
       ResumeEmulation = 1;
-      pspMenuFindItemById(((const PspUiGallery*)gallery)->Menu,
-        ((const PspMenuItem*)item)->ID);
+      pl_menu_find_item_by_id(&(((const PspUiGallery*)gallery)->Menu),
+        ((const pl_menu_item*)item)->id);
       free(path);
 
       return 1;
@@ -856,26 +849,26 @@ int OnSaveStateOk(const void *gallery, const void *item)
 }
 
 int OnSaveStateButtonPress(const PspUiGallery *gallery, 
-      PspMenuItem *sel, u32 button_mask)
+      pl_menu_item *sel, u32 button_mask)
 {
-  if (!GameName) { TabIndex++; return 0; }
+  if (!GAME_LOADED) 
+    return 0;
 
   if (button_mask & PSP_CTRL_SQUARE 
     || button_mask & PSP_CTRL_TRIANGLE)
   {
-    char *path;
     char caption[32];
-    const char *config_name = pspFileIoGetFilename(GameName);
-    PspMenuItem *item = pspMenuFindItemById(gallery->Menu, sel->ID);
+    char *path;
+    const char *config_name = pl_file_get_filename(CURRENT_GAME);
 
     path = (char*)malloc(strlen(SaveStatePath) + strlen(config_name) + 8);
-    sprintf(path, "%s%s.s%02i", SaveStatePath, config_name, item->ID);
+    sprintf(path, "%s%s.s%02i", SaveStatePath, config_name, sel->id);
 
     do /* not a real loop; flow control construct */
     {
       if (button_mask & PSP_CTRL_SQUARE)
       {
-        if (pspFileIoCheckIfExists(path) && !pspUiConfirm("Overwrite existing state?"))
+        if (pl_file_exists(path) && !pspUiConfirm("Overwrite existing state?"))
           break;
 
         pspUiFlashMessage("Saving, please wait ...");
@@ -890,12 +883,12 @@ int OnSaveStateButtonPress(const PspUiGallery *gallery,
         SceIoStat stat;
 
         /* Trash the old icon (if any) */
-        if (item->Icon && item->Icon != NoSaveIcon)
-          pspImageDestroy((PspImage*)item->Icon);
+        if (sel->param && sel->param != NoSaveIcon)
+          pspImageDestroy((PspImage*)sel->param);
 
         /* Update icon, help text */
-        item->Icon = icon;
-        pspMenuSetHelpText(item, PresentSlotText);
+        sel->param = icon;
+        pl_menu_set_item_help_text(sel, PresentSlotText);
 
         /* Get file modification time/date */
         if (sceIoGetstat(path, &stat) < 0)
@@ -908,27 +901,27 @@ int OnSaveStateButtonPress(const PspUiGallery *gallery,
             stat.st_mtime.hour,
             stat.st_mtime.minute);
 
-        pspMenuSetCaption(item, caption);
+        pl_menu_set_item_caption(sel, caption);
       }
       else if (button_mask & PSP_CTRL_TRIANGLE)
       {
-        if (!pspFileIoCheckIfExists(path) || !pspUiConfirm("Delete state?"))
+        if (!pl_file_exists(path) || !pspUiConfirm("Delete state?"))
           break;
 
-        if (!pspFileIoDelete(path))
+        if (!pl_file_rm(path))
         {
           pspUiAlert("ERROR: State not deleted");
           break;
         }
 
         /* Trash the old icon (if any) */
-        if (item->Icon && item->Icon != NoSaveIcon)
-          pspImageDestroy((PspImage*)item->Icon);
+        if (sel->param && sel->param != NoSaveIcon)
+          pspImageDestroy((PspImage*)sel->param);
 
         /* Update icon, caption */
-        item->Icon = NoSaveIcon;
-        pspMenuSetHelpText(item, EmptySlotText);
-        pspMenuSetCaption(item, "Empty");
+        sel->param = NoSaveIcon;
+        pl_menu_set_item_help_text(sel, EmptySlotText);
+        pl_menu_set_item_caption(sel, "Empty");
       }
     } while (0);
 
@@ -958,55 +951,72 @@ void OnSystemRender(const void *uiobject, const void *item_obj)
 
 static void DisplayStateTab()
 {
-  if (!GameName) { TabIndex++; return; }
+  if (!GAME_LOADED) { TabIndex++; return; }
 
-  PspMenuItem *item;
+  pl_menu_item *item, *sel;
   SceIoStat stat;
   char caption[32];
+  ScePspDateTime latest;
 
-  const char *config_name = pspFileIoGetFilename(GameName);
+  const char *config_name = pl_file_get_filename(CURRENT_GAME);
   char *path = (char*)malloc(strlen(SaveStatePath) + strlen(config_name) + 8);
   char *game_name = strdup(config_name);
   char *dot = strrchr(game_name, '.');
   if (dot) *dot='\0';
 
-  /* Initialize icons */
-  for (item = SaveStateGallery.Menu->First; item; item = item->Next)
-  {
-    sprintf(path, "%s%s.s%02i", SaveStatePath, config_name, item->ID);
+  memset(&latest, 0, sizeof(latest));
 
-    if (pspFileIoCheckIfExists(path))
+  /* Initialize icons */
+  for (item = SaveStateGallery.Menu.items; item; item = item->next)
+  {
+    sprintf(path, "%s%s.s%02i", SaveStatePath, config_name, item->id);
+
+    if (pl_file_exists(path))
     {
       if (sceIoGetstat(path, &stat) < 0)
         sprintf(caption, "ERROR");
       else
+      {
+        /* Determine the latest save state */
+        if (pl_util_date_compare(&latest, &stat.st_mtime) < 0)
+        {
+          sel = item;
+          latest = stat.st_mtime;
+        }
+
         sprintf(caption, "%02i/%02i/%02i %02i:%02i",
           stat.st_mtime.month,
           stat.st_mtime.day,
           stat.st_mtime.year - (stat.st_mtime.year / 100) * 100,
           stat.st_mtime.hour,
           stat.st_mtime.minute);
+      }
 
-      pspMenuSetCaption(item, caption);
-      item->Icon = LoadStateIcon(path);
-      pspMenuSetHelpText(item, PresentSlotText);
+      pl_menu_set_item_caption(item, caption);
+      item->param = LoadStateIcon(path);
+      pl_menu_set_item_help_text(item, PresentSlotText);
     }
     else
     {
-      pspMenuSetCaption(item, "Empty");
-      item->Icon = NoSaveIcon;
-      pspMenuSetHelpText(item, EmptySlotText);
+      pl_menu_set_item_caption(item, "Empty");
+      item->param = NoSaveIcon;
+      pl_menu_set_item_help_text(item, EmptySlotText);
     }
   }
 
   free(path);
+
+  /* Highlight the latest save state if none are selected */
+  if (SaveStateGallery.Menu.selected == NULL)
+    SaveStateGallery.Menu.selected = sel;
+
   pspUiOpenGallery(&SaveStateGallery, game_name);
   free(game_name);
 
   /* Destroy any icons */
-  for (item = SaveStateGallery.Menu->First; item; item = item->Next)
-    if (item->Icon != NULL && item->Icon != NoSaveIcon)
-      pspImageDestroy((PspImage*)item->Icon);
+  for (item = SaveStateGallery.Menu.items; item; item = item->next)
+    if (item->param != NULL && item->param != NoSaveIcon)
+      pspImageDestroy((PspImage*)item->param);
 }
 
 /* Initialize game configuration */
@@ -1018,14 +1028,12 @@ static void InitButtonConfig()
 /* Load game configuration */
 static int LoadButtonConfig()
 {
-  char *path;
-  if (!(path = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(ButtonConfigFile) + 6))))
-    return 0;
-  sprintf(path, "%s%s.cnf", pspGetAppDirectory(), ButtonConfigFile);
+  pl_file_path path;
+  snprintf(path, sizeof(path) - 1, "%sbuttons.cnf",
+           pl_psp_get_app_directory());
 
   /* Open file for reading */
   FILE *file = fopen(path, "r");
-  free(path);
 
   /* If no configuration, load defaults */
   if (!file)
@@ -1050,14 +1058,11 @@ static int LoadButtonConfig()
 /* Save game configuration */
 static int SaveButtonConfig()
 {
-  char *path;
-  if (!(path = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(ButtonConfigFile) + 6))))
-    return 0;
-  sprintf(path, "%s%s.cnf", pspGetAppDirectory(), ButtonConfigFile);
+  pl_file_path path;
+  snprintf(path, sizeof(path) - 1, "%sbuttons.cnf", pl_psp_get_app_directory());
 
   /* Open file for writing */
   FILE *file = fopen(path, "w");
-  free(path);
   if (!file) return 0;
 
   /* Write contents of struct */
@@ -1070,66 +1075,62 @@ static int SaveButtonConfig()
 /* Load options */
 void LoadOptions()
 {
-  char *path = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(OptionsFile) + 1));
-  sprintf(path, "%s%s", pspGetAppDirectory(), OptionsFile);
+  pl_file_path path;
+  snprintf(path, sizeof(path) - 1, "%ssmsplus.ini", pl_psp_get_app_directory());
 
   /* Initialize INI structure */
-  PspInit *init = pspInitCreate();
-
-  /* Read the file */
-  pspInitLoad(init, path);
+  pl_ini_file init;
+  pl_ini_load(&init, path);
 
   /* Load values */
-  Options.DisplayMode = pspInitGetInt(init, "Video", "Display Mode", DISPLAY_MODE_UNSCALED);
-  Options.UpdateFreq = pspInitGetInt(init, "Video", "Update Frequency", 60);
-  Options.Frameskip = pspInitGetInt(init, "Video", "Frameskip", 1);
-  Options.VSync = pspInitGetInt(init, "Video", "VSync", 0);
-  Options.ClockFreq = pspInitGetInt(init, "Video", "PSP Clock Frequency", 222);
-  Options.ShowFps = pspInitGetInt(init, "Video", "Show FPS", 0);
-  Options.ControlMode = pspInitGetInt(init, "Menu", "Control Mode", 0);
-  UiMetric.Animate = pspInitGetInt(init, "Menu", "Animate", 1);
-  Options.VertStrip = pspInitGetInt(init, "Game", "Vertical Strip", 1);
-  Options.SoundEngine = pspInitGetInt(init, "System", "FM Engine", SND_NULL);
-  Options.SoundBoost = pspInitGetInt(init, "System", "Sound Boost", 0);
-
-  if (GamePath) free(GamePath);
-  GamePath = pspInitGetString(init, "File", "Game Path", NULL);
+  Options.DisplayMode = pl_ini_get_int(&init, "Video", "Display Mode", DISPLAY_MODE_UNSCALED);
+  Options.UpdateFreq = pl_ini_get_int(&init, "Video", "Update Frequency", 60);
+  Options.Frameskip = pl_ini_get_int(&init, "Video", "Frameskip", 1);
+  Options.VSync = pl_ini_get_int(&init, "Video", "VSync", 0);
+  Options.ClockFreq = pl_ini_get_int(&init, "Video", "PSP Clock Frequency", 222);
+  Options.ShowFps = pl_ini_get_int(&init, "Video", "Show FPS", 0);
+  Options.ControlMode = pl_ini_get_int(&init, "Menu", "Control Mode", 0);
+  UiMetric.Animate = pl_ini_get_int(&init, "Menu", "Animate", 1);
+  Options.VertStrip = pl_ini_get_int(&init, "Game", "Vertical Strip", 1);
+  Options.SoundEngine = pl_ini_get_int(&init, "System", "FM Engine", SND_NULL);
+  Options.SoundBoost = pl_ini_get_int(&init, "System", "Sound Boost", 0);
+  Options.AutoFire = pl_ini_get_int(&init, "Input", "Autofire", 2);
+  pl_ini_get_string(&init, "File", "Game Path", NULL, GamePath, sizeof(GamePath));
 
   /* Clean up */
-  free(path);
-  pspInitDestroy(init);
+  pl_ini_destroy(&init);
 }
 
 /* Save options */
 static int SaveOptions()
 {
-  char *path = (char*)malloc(sizeof(char) * (strlen(pspGetAppDirectory()) + strlen(OptionsFile) + 1));
-  sprintf(path, "%s%s", pspGetAppDirectory(), OptionsFile);
+  pl_file_path path;
+  snprintf(path, sizeof(path) - 1, "%ssmsplus.ini", pl_psp_get_app_directory());
 
   /* Initialize INI structure */
-  PspInit *init = pspInitCreate();
+  pl_ini_file init;
+  pl_ini_create(&init);
 
   /* Set values */
-  pspInitSetInt(init, "Video", "Display Mode", Options.DisplayMode);
-  pspInitSetInt(init, "Video", "Update Frequency", Options.UpdateFreq);
-  pspInitSetInt(init, "Video", "Frameskip", Options.Frameskip);
-  pspInitSetInt(init, "Video", "VSync", Options.VSync);
-  pspInitSetInt(init, "Video", "PSP Clock Frequency",Options.ClockFreq);
-  pspInitSetInt(init, "Video", "Show FPS", Options.ShowFps);
-  pspInitSetInt(init, "Menu", "Control Mode", Options.ControlMode);
-  pspInitSetInt(init, "Menu", "Animate", UiMetric.Animate);
-  pspInitSetInt(init, "Game", "Vertical Strip", Options.VertStrip);
-  pspInitSetInt(init, "System", "FM Engine", Options.SoundEngine);
-  pspInitSetInt(init, "System", "Sound Boost", Options.SoundBoost);
-
-  if (GamePath) pspInitSetString(init, "File", "Game Path", GamePath);
+  pl_ini_set_int(&init, "Video", "Display Mode", Options.DisplayMode);
+  pl_ini_set_int(&init, "Video", "Update Frequency", Options.UpdateFreq);
+  pl_ini_set_int(&init, "Video", "Frameskip", Options.Frameskip);
+  pl_ini_set_int(&init, "Video", "VSync", Options.VSync);
+  pl_ini_set_int(&init, "Video", "PSP Clock Frequency",Options.ClockFreq);
+  pl_ini_set_int(&init, "Video", "Show FPS", Options.ShowFps);
+  pl_ini_set_int(&init, "Menu", "Control Mode", Options.ControlMode);
+  pl_ini_set_int(&init, "Menu", "Animate", UiMetric.Animate);
+  pl_ini_set_int(&init, "Game", "Vertical Strip", Options.VertStrip);
+  pl_ini_set_int(&init, "System", "FM Engine", Options.SoundEngine);
+  pl_ini_set_int(&init, "System", "Sound Boost", Options.SoundBoost);
+  pl_ini_set_int(&init, "Input", "Autofire", Options.AutoFire);
+  pl_ini_set_string(&init, "File", "Game Path", GamePath);
 
   /* Save INI file */
-  int status = pspInitSave(init, path);
+  int status = pl_ini_save(&init, path);
 
   /* Clean up */
-  pspInitDestroy(init);
-  free(path);
+  pl_ini_destroy(&init);
 
   return status;
 }
@@ -1203,27 +1204,21 @@ void TrashMenu()
   SaveOptions();
 
   /* Trash menus */
-  pspMenuDestroy(OptionUiMenu.Menu);
-  pspMenuDestroy(ControlUiMenu.Menu);
-  pspMenuDestroy(SaveStateGallery.Menu);
-  pspMenuDestroy(SystemUiMenu.Menu);
+  pl_menu_destroy(&SystemUiMenu.Menu);
+  pl_menu_destroy(&OptionUiMenu.Menu);
+  pl_menu_destroy(&ControlUiMenu.Menu);
+  pl_menu_destroy(&SaveStateGallery.Menu);
 
   /* Trash images */
   if (Background) pspImageDestroy(Background);
   if (NoSaveIcon) pspImageDestroy(NoSaveIcon);
-
-  if (GameName) free(GameName);
-  if (GamePath) free(GamePath);
-
-  free(ScreenshotPath);
-  free(SaveStatePath);
 }
 
 /* Save or load SRAM */
 void system_manage_sram(uint8 *sram, int slot, int mode)
 {
   FILE *fd;
-  const char *config_name = pspFileIoGetFilename(GameName);
+  const char *config_name = pl_file_get_filename(CURRENT_GAME);
   char *path = (char*)malloc(sizeof(char)
     * (strlen(SaveStatePath) + strlen(config_name) + 8));
   sprintf(path, "%s%s.srm", SaveStatePath, config_name);

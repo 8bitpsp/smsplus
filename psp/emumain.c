@@ -4,12 +4,13 @@
 #include "time.h"
 #include <psprtc.h>
 
-#include "audio.h"
+#include "pl_file.h"
+#include "pl_snd.h"
+#include "pl_perf.h"
+#include "pl_util.h"
+#include "pl_psp.h"
 #include "video.h"
-#include "psp.h"
 #include "ctrl.h"
-#include "perf.h"
-#include "util.h"
 
 #include "shared.h"
 #include "sound.h"
@@ -17,7 +18,7 @@
 
 PspImage *Screen;
 
-static PspFpsCounter FpsCounter;
+static pl_perf_counter FpsCounter;
 static int ClearScreen;
 static int ScreenX, ScreenY, ScreenW, ScreenH;
 static int TicksPerUpdate;
@@ -26,7 +27,7 @@ static u64 LastTick;
 static u64 CurrentTick;
 static int Frame;
 
-extern char *GameName;
+extern pl_file_path CurrentGame;
 extern EmulatorOptions Options;
 extern const u64 ButtonMask[];
 extern const int ButtonMapId[];
@@ -35,7 +36,9 @@ extern char *ScreenshotPath;
 
 static inline int ParseInput();
 static inline void RenderVideo();
-void AudioCallback(void* buf, unsigned int *length, void *userdata);
+static void AudioCallback(pl_snd_sample* buf,
+                          unsigned int samples,
+                          void *userdata);
 void MixerCallback(int16 **stream, int16 **output, int length);
 
 void InitEmulator()
@@ -70,6 +73,8 @@ void InitEmulator()
 
   sms.use_fm = 0;
   sms.territory = TERRITORY_EXPORT;
+
+  pl_snd_set_callback(0, AudioCallback, NULL);
 }
 
 void RunEmulator()
@@ -123,7 +128,7 @@ void RunEmulator()
   ScreenY = (SCR_HEIGHT / 2) - (ScreenH / 2);
 
   /* Init performance counter */
-  pspPerfInitFps(&FpsCounter);
+  pl_perf_init_counter(&FpsCounter);
 
   /* Recompute update frequency */
   TicksPerSecond = sceRtcGetTickResolution();
@@ -137,7 +142,7 @@ void RunEmulator()
   ClearScreen = 1;
 
   /* Resume sound */
-  pspAudioSetChannelCallback(0, AudioCallback, 0);
+  pl_snd_resume(0);
 
   /* Wait for V. refresh */
   pspVideoWaitVSync();
@@ -165,7 +170,7 @@ void RunEmulator()
   }
 
   /* Stop sound */
-  pspAudioSetChannelCallback(0, NULL, 0);
+  pl_snd_pause(0);
 }
 
 void TrashEmulator()
@@ -173,7 +178,7 @@ void TrashEmulator()
   /* Trash screen */
   if (Screen) pspImageDestroy(Screen);
 
-  if (GameName)
+  if (CurrentGame[0] != '\0')
   {
     /* Release emulation resources */
     system_poweroff();
@@ -191,6 +196,7 @@ int ParseInput()
   input.analog[1] = 0x7F;
 
   static SceCtrlData pad;
+  static int autofire_status = 0;
 
   /* Check the input */
   if (pspCtrlPollControls(&pad))
@@ -198,8 +204,11 @@ int ParseInput()
 #ifdef PSP_DEBUG
     if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
       == (PSP_CTRL_SELECT | PSP_CTRL_START))
-        pspUtilSaveVramSeq(ScreenshotPath, "game");
+        pl_util_save_vram_seq(ScreenshotPath, "game");
 #endif
+
+    if (--autofire_status < 0)
+      autofire_status = Options.AutoFire;
 
     /* Parse input */
     int i, on, code;
@@ -212,7 +221,12 @@ int ParseInput()
       /* doesn't trigger any other combination presses. */
       if (on) pad.Buttons &= ~ButtonMask[i];
 
-      if (code & JOY)
+      if (code & AFI)
+      {
+        if (on && (autofire_status == 0)) 
+          input.pad[0] |= CODE_MASK(code);
+      }
+      else if (code & JOY)
       {
         if (on) input.pad[0] |= CODE_MASK(code);
       }
@@ -280,7 +294,7 @@ void RenderVideo()
   if (Options.ShowFps)
   {
     static char fps_display[32];
-    sprintf(fps_display, " %3.02f", pspPerfGetFps(&FpsCounter));
+    sprintf(fps_display, " %3.02f", pl_perf_update_counter(&FpsCounter));
 
     int width = pspFontGetTextWidth(&PspStockFont, fps_display);
     int height = pspFontGetLineHeight(&PspStockFont);
@@ -300,7 +314,8 @@ void RenderVideo()
   }
 
   /* Wait for VSync signal */
-  if (Options.VSync) pspVideoWaitVSync();
+  if (Options.VSync) 
+    pspVideoWaitVSync();
 
   /* Swap buffers */
   pspVideoSwapBuffers();
@@ -322,14 +337,15 @@ void MixerCallback(int16 **stream, int16 **output, int length)
   }
 }
 
-void AudioCallback(void* buf, unsigned int *length, void *userdata)
+static void AudioCallback(pl_snd_sample* buf,
+                          unsigned int samples,
+                          void *userdata)
 {
-  PspSample *OutBuf = (PspSample*)buf;
   int i;
-
-  for(i = 0; i < *length; i++) 
+  for (i = 0; i < samples; i++) 
   {
-    OutBuf[i].Left = snd.output[0][i];
-    OutBuf[i].Right = snd.output[1][i];
+    buf[i].stereo.l = snd.output[0][i];
+    buf[i].stereo.r = snd.output[1][i];
   }
 }
+
