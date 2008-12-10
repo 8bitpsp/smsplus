@@ -387,6 +387,11 @@ void InitMenu()
   TabIndex = TAB_ABOUT;
   Background = NULL;
 
+  /* Initialize paths */
+  sprintf(SaveStatePath, "%ssavedata/", pl_psp_get_app_directory());
+  sprintf(ScreenshotPath, "ms0:/PSP/PHOTO/%s/", PSP_APP_NAME);
+  sprintf(GamePath, "%s", pl_psp_get_app_directory());
+
   /* Initialize options */
   LoadOptions();
 
@@ -396,8 +401,8 @@ void InitMenu()
   Background = pspImageLoadPng("background.png");
 
   /* Init NoSaveState icon image */
-  NoSaveIcon = pspImageCreate(160, 152, PSP_IMAGE_16BPP);
-  pspImageClear(NoSaveIcon, RGB(0x44,0x00,0x00));
+  NoSaveIcon = pspImageCreate(136, 114, PSP_IMAGE_16BPP);
+  pspImageClear(NoSaveIcon, RGB(0x0c,0,0x3f));
 
   /* Initialize state menu */
   int i;
@@ -412,11 +417,6 @@ void InitMenu()
   pl_menu_create(&SystemUiMenu.Menu, SystemMenuDef);
   pl_menu_create(&OptionUiMenu.Menu, OptionMenuDef);
   pl_menu_create(&ControlUiMenu.Menu, ControlMenuDef);
-
-  /* Initialize paths */
-  sprintf(SaveStatePath, "%ssavedata/", pl_psp_get_app_directory());
-  sprintf(ScreenshotPath, "ms0:/PSP/PHOTO/%s/", PSP_APP_NAME);
-  sprintf(GamePath, "%s", pl_psp_get_app_directory());
 
   /* Load default configuration */
   LoadButtonConfig();
@@ -470,58 +470,61 @@ void DisplayMenu()
     /* Set buttons to autorepeat */
     pspCtrlSetPollingMode(PSP_CTRL_AUTOREPEAT);
 
-    /* Display appropriate tab */
-    switch (TabIndex)
+    do
     {
-    case TAB_STATE:
-      DisplayStateTab();
-      break;
-    case TAB_CONTROL:
-      /* Load current button mappings */
-      for (item = ControlUiMenu.Menu.items, i = 0; item; item = item->next, i++)
-        pl_menu_select_option_by_value(item, (void*)ActiveConfig.ButtonMap[i]);
-      pspUiOpenMenu(&ControlUiMenu, NULL);
-      break;
-    case TAB_QUICKLOAD:
-      pspUiOpenBrowser(&QuickloadBrowser,
-                      (GAME_LOADED) ? CURRENT_GAME : GamePath);
-      break;
-    case TAB_SYSTEM:
-      item = pl_menu_find_item_by_id(&SystemUiMenu.Menu, SYSTEM_VERT_STRIP);
-      pl_menu_select_option_by_value(item, (void*)Options.VertStrip);
-      item = pl_menu_find_item_by_id(&SystemUiMenu.Menu, SYSTEM_SOUND_ENGINE);
-      pl_menu_select_option_by_value(item, (void*)Options.SoundEngine);
-      item = pl_menu_find_item_by_id(&SystemUiMenu.Menu, SYSTEM_SOUND_BOOST);
-      pl_menu_select_option_by_value(item, (void*)Options.SoundBoost);
-      pspUiOpenMenu(&SystemUiMenu, NULL);
-      break;
-    case TAB_OPTION:
-      /* Init menu options */
-      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_DISPLAY_MODE);
-      pl_menu_select_option_by_value(item, (void*)Options.DisplayMode);
-      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_SYNC_FREQ);
-      pl_menu_select_option_by_value(item, (void*)Options.UpdateFreq);
-      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_FRAMESKIP);
-      pl_menu_select_option_by_value(item, (void*)(int)Options.Frameskip);
-      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_VSYNC);
-      pl_menu_select_option_by_value(item, (void*)Options.VSync);
-      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_CLOCK_FREQ);
-      pl_menu_select_option_by_value(item, (void*)Options.ClockFreq);
-      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_SHOW_FPS);
-      pl_menu_select_option_by_value(item, (void*)Options.ShowFps);
-      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_CONTROL_MODE);
-      pl_menu_select_option_by_value(item, (void*)Options.ControlMode);
-      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_ANIMATE);
-      pl_menu_select_option_by_value(item, (void*)UiMetric.Animate);
-      item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_AUTOFIRE);
-      pl_menu_select_option_by_value(item, (void*)Options.AutoFire);
+      /* Display appropriate tab */
+      switch (TabIndex)
+      {
+      case TAB_STATE:
+        DisplayStateTab();
+        break;
+      case TAB_CONTROL:
+        /* Load current button mappings */
+        for (item = ControlUiMenu.Menu.items, i = 0; item; item = item->next, i++)
+          pl_menu_select_option_by_value(item, (void*)ActiveConfig.ButtonMap[i]);
+        pspUiOpenMenu(&ControlUiMenu, NULL);
+        break;
+      case TAB_QUICKLOAD:
+        pspUiOpenBrowser(&QuickloadBrowser,
+                        (GAME_LOADED) ? CURRENT_GAME : GamePath);
+        break;
+      case TAB_SYSTEM:
+        item = pl_menu_find_item_by_id(&SystemUiMenu.Menu, SYSTEM_VERT_STRIP);
+        pl_menu_select_option_by_value(item, (void*)Options.VertStrip);
+        item = pl_menu_find_item_by_id(&SystemUiMenu.Menu, SYSTEM_SOUND_ENGINE);
+        pl_menu_select_option_by_value(item, (void*)Options.SoundEngine);
+        item = pl_menu_find_item_by_id(&SystemUiMenu.Menu, SYSTEM_SOUND_BOOST);
+        pl_menu_select_option_by_value(item, (void*)Options.SoundBoost);
+        pspUiOpenMenu(&SystemUiMenu, NULL);
+        break;
+      case TAB_OPTION:
+        /* Init menu options */
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_DISPLAY_MODE);
+        pl_menu_select_option_by_value(item, (void*)Options.DisplayMode);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_SYNC_FREQ);
+        pl_menu_select_option_by_value(item, (void*)Options.UpdateFreq);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_FRAMESKIP);
+        pl_menu_select_option_by_value(item, (void*)(int)Options.Frameskip);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_VSYNC);
+        pl_menu_select_option_by_value(item, (void*)Options.VSync);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_CLOCK_FREQ);
+        pl_menu_select_option_by_value(item, (void*)Options.ClockFreq);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_SHOW_FPS);
+        pl_menu_select_option_by_value(item, (void*)Options.ShowFps);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_CONTROL_MODE);
+        pl_menu_select_option_by_value(item, (void*)Options.ControlMode);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_ANIMATE);
+        pl_menu_select_option_by_value(item, (void*)UiMetric.Animate);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_AUTOFIRE);
+        pl_menu_select_option_by_value(item, (void*)Options.AutoFire);
 
-      pspUiOpenMenu(&OptionUiMenu, NULL);
-      break;
-    case TAB_ABOUT:
-      pspUiSplashScreen(&SplashScreen);
-      break;
-    }
+        pspUiOpenMenu(&OptionUiMenu, NULL);
+        break;
+      case TAB_ABOUT:
+        pspUiSplashScreen(&SplashScreen);
+        break;
+      }
+    } while (!ExitPSP && !ResumeEmulation);
 
     if (!ExitPSP)
     {
