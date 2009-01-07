@@ -20,7 +20,8 @@ BUILD_APP=sms.o	pio.o memz80.o render.o vdp.o \
 BUILD_MINIZIP=unzip/ioapi.o unzip/unzip.o
 BUILD_SOUND=$(SOUND)/sound.o $(SOUND)/sn76489.o $(SOUND)/emu2413.o \
             $(SOUND)/ym2413.o $(SOUND)/fmintf.o $(SOUND)/stream.o
-BUILD_PSPAPP=$(PSPAPP)/main.o $(PSPAPP)/emumain.o $(PSPAPP)/menu.o
+BUILD_PSPAPP=$(PSPAPP)/main.o $(PSPAPP)/emumain.o $(PSPAPP)/menu.o \
+             $(PSPAPP)/rewind.o 
 
 OBJS=$(BUILD_SOUND) $(BUILD_Z80) $(BUILD_MINIZIP) \
      $(BUILD_APP) $(BUILD_PSPAPP)

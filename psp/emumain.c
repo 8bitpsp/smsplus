@@ -1,4 +1,5 @@
 #include "emumain.h"
+#include "rewind.h"
 
 #include <psptypes.h>
 #include "time.h"
@@ -27,6 +28,9 @@ static u64 LastTick;
 static u64 CurrentTick;
 static int Frame;
 
+static int RewindReady;
+static int Rewinding;
+
 extern pl_file_path CurrentGame;
 extern EmulatorOptions Options;
 extern const u64 ButtonMask[];
@@ -44,6 +48,7 @@ void MixerCallback(int16 **stream, int16 **output, int length);
 void InitEmulator()
 {
   ClearScreen = 0;
+  RewindReady = 0;
 
   /* Initialize screen buffer */
   Screen = pspImageCreateVram(256, 192, PSP_IMAGE_INDEXED);
@@ -140,12 +145,15 @@ void RunEmulator()
   }
   Frame = 0;
   ClearScreen = 1;
+  Rewinding = 0;
 
   /* Resume sound */
   pl_snd_resume(0);
 
   /* Wait for V. refresh */
   pspVideoWaitVSync();
+pl_rewind Rewind;
+pl_rewind_init(&Rewind);
 
   /* Main emulation loop */
   while (!ExitPSP)
@@ -168,6 +176,7 @@ void RunEmulator()
       RenderVideo();
     }
   }
+pl_rewind_destroy(&Rewind);
 
   /* Stop sound */
   pl_snd_pause(0);
@@ -201,12 +210,6 @@ int ParseInput()
   /* Check the input */
   if (pspCtrlPollControls(&pad))
   {
-#ifdef PSP_DEBUG
-    if ((pad.Buttons & (PSP_CTRL_SELECT | PSP_CTRL_START))
-      == (PSP_CTRL_SELECT | PSP_CTRL_START))
-        pl_util_save_vram_seq(ScreenshotPath, "game");
-#endif
-
     if (--autofire_status < 0)
       autofire_status = Options.AutoFire;
 
@@ -244,6 +247,9 @@ int ParseInput()
         {
         case SPC_MENU:
           if (on) return 1;
+          break;
+        case SPC_REWIND:
+          Rewinding = on;
           break;
         }
       }

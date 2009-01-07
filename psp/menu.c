@@ -32,21 +32,23 @@
 #define TAB_ABOUT     5
 #define TAB_MAX       TAB_SYSTEM
 
-#define OPTION_DISPLAY_MODE 1
-#define OPTION_SYNC_FREQ    2
-#define OPTION_FRAMESKIP    3
-#define OPTION_VSYNC        4
-#define OPTION_CLOCK_FREQ   5
-#define OPTION_SHOW_FPS     6
-#define OPTION_CONTROL_MODE 7
-#define OPTION_ANIMATE      8
-#define OPTION_AUTOFIRE     9
+#define OPTION_DISPLAY_MODE        0x01
+#define OPTION_SYNC_FREQ           0x02
+#define OPTION_FRAMESKIP           0x03
+#define OPTION_VSYNC               0x04
+#define OPTION_CLOCK_FREQ          0x05
+#define OPTION_SHOW_FPS            0x06
+#define OPTION_CONTROL_MODE        0x07
+#define OPTION_ANIMATE             0x08
+#define OPTION_AUTOFIRE            0x09
+#define OPTION_REWIND_SAVE_RATE    0x0A
+#define OPTION_REWIND_REPLAY_DELAY 0x0B
 
-#define SYSTEM_SCRNSHOT     1
-#define SYSTEM_RESET        2
-#define SYSTEM_VERT_STRIP   3
-#define SYSTEM_SOUND_ENGINE 4
-#define SYSTEM_SOUND_BOOST  5
+#define SYSTEM_SCRNSHOT     0x11
+#define SYSTEM_RESET        0x12
+#define SYSTEM_VERT_STRIP   0x13
+#define SYSTEM_SOUND_ENGINE 0x14
+#define SYSTEM_SOUND_BOOST  0x15
 
 extern PspImage *Screen;
 
@@ -169,6 +171,21 @@ PL_MENU_OPTIONS_BEGIN(ControlModeOptions)
   PL_MENU_OPTION("\026\242\020 cancels, \026\241\020 confirms (US)",    0)
   PL_MENU_OPTION("\026\241\020 cancels, \026\242\020 confirms (Japan)", 1)
 PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(RewindSaveRateOptions)
+  PL_MENU_OPTION("Every   5 frames", 5)
+  PL_MENU_OPTION("Every  15 frames", 15)
+  PL_MENU_OPTION("Every  30 frames", 30)
+  PL_MENU_OPTION("Every  60 frames", 60)
+  PL_MENU_OPTION("Every 120 frames", 120)
+  PL_MENU_OPTION("Every 240 frames", 240)
+PL_MENU_OPTIONS_END
+PL_MENU_OPTIONS_BEGIN(RewindReplayDelayOptions)
+  PL_MENU_OPTION("50 ms",   50)
+  PL_MENU_OPTION("100 ms", 100)
+  PL_MENU_OPTION("500 ms", 500)
+  PL_MENU_OPTION("1 s", 1000)
+  PL_MENU_OPTION("2 s", 2000)
+PL_MENU_OPTIONS_END
 PL_MENU_OPTIONS_BEGIN(ButtonMapOptions)
   /* Unmapped */
   PL_MENU_OPTION("None", 0)
@@ -207,6 +224,12 @@ PL_MENU_ITEMS_BEGIN(OptionMenuDef)
                "\026\250\020 Larger values: faster emulation, faster battery depletion (default: 222MHz)")
   PL_MENU_ITEM("Show FPS counter",    OPTION_SHOW_FPS, ToggleOptions,
                "\026\250\020 Show/hide the frames-per-second counter")
+  PL_MENU_HEADER("Enhancements")
+  PL_MENU_ITEM("Rewind save frequency", OPTION_REWIND_SAVE_RATE,
+      RewindSaveRateOptions, "\026\250\020 Change rewind saving frequency")
+  PL_MENU_ITEM("Rewind delay", OPTION_REWIND_REPLAY_DELAY,
+      RewindReplayDelayOptions, "\026\250\020 Change delay between frames")
+
   PL_MENU_HEADER("Menu")
   PL_MENU_ITEM("Button mode", OPTION_CONTROL_MODE, ControlModeOptions,
                "\026\250\020 Change OK and Cancel button mapping")
@@ -517,6 +540,10 @@ void DisplayMenu()
         pl_menu_select_option_by_value(item, (void*)UiMetric.Animate);
         item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_AUTOFIRE);
         pl_menu_select_option_by_value(item, (void*)Options.AutoFire);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_REWIND_SAVE_RATE);
+        pl_menu_select_option_by_value(item, (void*)Options.RewindSaveRate);
+        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_REWIND_REPLAY_DELAY);
+        pl_menu_select_option_by_value(item, (void*)Options.RewindReplayDelay);
 
         pspUiOpenMenu(&OptionUiMenu, NULL);
         break;
@@ -558,8 +585,8 @@ void OnSplashRender(const void *splash, const void *null)
     PSP_APP_NAME" version "PSP_APP_VER" ("__DATE__")",
     "\026http://psp.akop.org/smsplus",
     " ",
-    "2007 Akop Karapetyan (port)",
-    "1998-2004 Charles MacDonald (emulation)",
+    "2007-2009 Akop Karapetyan",
+    "1998-2004 Charles MacDonald",
     NULL
   };
 
@@ -658,7 +685,7 @@ int  OnMenuItemChanged(const struct PspUiMenu *uimenu,
   {
     ActiveConfig.ButtonMap[item->id] = (unsigned int)option->value;
   }
-  else if (uimenu == &SystemUiMenu)
+  else
   {
     switch(item->id)
     {
@@ -677,12 +704,7 @@ int  OnMenuItemChanged(const struct PspUiMenu *uimenu,
     case SYSTEM_SOUND_BOOST:
       Options.SoundBoost = (int)option->value;
       break;
-    }
-  }
-  else if (uimenu == &OptionUiMenu)
-  {
-    switch(item->id)
-    {
+
     case OPTION_DISPLAY_MODE:
       Options.DisplayMode = (int)option->value;
       break;
@@ -713,6 +735,12 @@ int  OnMenuItemChanged(const struct PspUiMenu *uimenu,
       break;
     case OPTION_AUTOFIRE:
       Options.AutoFire = (int)option->value;
+      break;
+    case OPTION_REWIND_SAVE_RATE:
+      Options.RewindSaveRate = (int)option->value;
+      break;
+    case OPTION_REWIND_REPLAY_DELAY:
+      Options.RewindReplayDelay = (int)option->value;
       break;
     }
   }
@@ -1098,6 +1126,8 @@ void LoadOptions()
   Options.SoundEngine = pl_ini_get_int(&init, "System", "FM Engine", SND_NULL);
   Options.SoundBoost = pl_ini_get_int(&init, "System", "Sound Boost", 0);
   Options.AutoFire = pl_ini_get_int(&init, "Input", "Autofire", 2);
+  Options.RewindSaveRate = pl_ini_get_int(&init, "Enhancements", "Rewind Save Rate", 5);
+  Options.RewindReplayDelay = pl_ini_get_int(&init, "Enhancements", "Rewind Replay Delay", 50);
   pl_ini_get_string(&init, "File", "Game Path", NULL, GamePath, sizeof(GamePath));
 
   /* Clean up */
@@ -1127,6 +1157,8 @@ static int SaveOptions()
   pl_ini_set_int(&init, "System", "FM Engine", Options.SoundEngine);
   pl_ini_set_int(&init, "System", "Sound Boost", Options.SoundBoost);
   pl_ini_set_int(&init, "Input", "Autofire", Options.AutoFire);
+  pl_ini_set_int(&init, "Enhancements", "Rewind Save Rate", Options.RewindSaveRate);
+  pl_ini_set_int(&init, "Enhancements", "Rewind Replay Delay", Options.RewindReplayDelay);
   pl_ini_set_string(&init, "File", "Game Path", GamePath);
 
   /* Save INI file */

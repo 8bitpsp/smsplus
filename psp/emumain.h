@@ -17,6 +17,7 @@ void TrashEmulator();
 #define CODE_MASK(x) (x & 0xffff)
 
 #define SPC_MENU               1
+#define SPC_REWIND             2
 
 #define MAP_BUTTONS            18
 
@@ -52,6 +53,8 @@ typedef struct
   int SoundEngine;
   int SoundBoost;
   int AutoFire;
+  int RewindSaveRate;
+  int RewindReplayDelay;
 } EmulatorOptions;
 
 struct ButtonConfig
