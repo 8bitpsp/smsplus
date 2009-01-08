@@ -19,6 +19,7 @@
 
 PspImage *Screen;
 
+static pl_rewind Rewinder;
 static pl_perf_counter FpsCounter;
 static int ClearScreen;
 static int ScreenX, ScreenY, ScreenW, ScreenH;
@@ -28,7 +29,6 @@ static u64 LastTick;
 static u64 CurrentTick;
 static int Frame;
 
-static int RewindReady;
 static int Rewinding;
 
 extern pl_file_path CurrentGame;
@@ -48,7 +48,6 @@ void MixerCallback(int16 **stream, int16 **output, int length);
 void InitEmulator()
 {
   ClearScreen = 0;
-  RewindReady = 0;
 
   /* Initialize screen buffer */
   Screen = pspImageCreateVram(256, 192, PSP_IMAGE_INDEXED);
@@ -152,14 +151,26 @@ void RunEmulator()
 
   /* Wait for V. refresh */
   pspVideoWaitVSync();
-pl_rewind Rewind;
-pl_rewind_init(&Rewind);
-
+pl_rewind_init(&Rewinder,
+  save_state_to_mem,
+  load_state_from_mem,
+  get_save_state_size);
+//pl_rewind_realloc(&Rewinder);
   /* Main emulation loop */
   while (!ExitPSP)
   {
     /* Check input */
     if (ParseInput()) break;
+
+    if (Rewinding)
+    {
+      if (!pl_rewind_restore(&Rewinder)) /* At starting point */
+        continue;
+    }
+    else
+    {
+      pl_rewind_save(&Rewinder);
+    }
 
     /* Run the system emulation for a frame */
     if (++Frame <= Options.Frameskip)
@@ -176,7 +187,7 @@ pl_rewind_init(&Rewind);
       RenderVideo();
     }
   }
-pl_rewind_destroy(&Rewind);
+pl_rewind_destroy(&Rewinder);
 
   /* Stop sound */
   pl_snd_pause(0);
@@ -348,10 +359,16 @@ static void AudioCallback(pl_snd_sample* buf,
                           void *userdata)
 {
   int i;
-  for (i = 0; i < samples; i++) 
+  if (!Rewinding)
   {
-    buf[i].stereo.l = snd.output[0][i];
-    buf[i].stereo.r = snd.output[1][i];
+    for (i = 0; i < samples; i++) 
+    {
+      buf[i].stereo.l = snd.output[0][i];
+      buf[i].stereo.r = snd.output[1][i];
+    }
   }
+  else /* Render silence */
+    for (i = 0; i < samples; i++) 
+      buf[i].stereo.l = buf[i].stereo.r = 0;
 }
 

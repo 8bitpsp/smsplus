@@ -9,35 +9,33 @@ struct rewind_state
   struct rewind_state *next;
 };
 
-int save_state_to_mem(unsigned char *stor);
-int get_save_state_size();
-int load_state_from_mem(unsigned char *stor);
-int get_psp_max_free_memory();
+static int get_psp_max_free_memory();
 
-int pl_rewind_init(pl_rewind *rewind)
+int pl_rewind_init(pl_rewind *rewind,
+  int (*save_state)(void *),
+  int (*load_state)(void *),
+  int (*get_state_size)())
 {
-	int total_rewind_memory = (int)((float)get_psp_max_free_memory() * 0.85); //reserves 85% of free memory
+	int memory_needed = (int)((float)get_psp_max_free_memory() * 0.85);
+  int state_data_size = get_state_size();
+  int state_count = (int)((float)memory_needed / (float)state_data_size);
 
-  rewind->state_data_size = get_save_state_size();
-  rewind->state_count = (int)((float)total_rewind_memory 
-                        / (float)rewind->state_data_size);
-
-	if (rewind->state_count <= 0)
+	if (state_count <= 0)
     return 0;
 
   /* First state */
   struct rewind_state *head, *prev, *cur;
   if (!(head = (struct rewind_state*)malloc(sizeof(struct rewind_state))))
     return 0;
-  head->data = malloc(rewind->state_data_size);
+  head->data = malloc(state_data_size);
   prev = head;
 
   /* The rest */
   int i;
-  for (i = 1; i < rewind->state_count; i++)
+  for (i = 1; i < state_count; i++)
   {
     cur = (struct rewind_state*)malloc(sizeof(struct rewind_state));
-    cur->data = malloc(rewind->state_data_size);
+    cur->data = malloc(state_data_size);
     prev->next = cur;
     cur->prev = prev;
     prev = cur;
@@ -51,7 +49,23 @@ int pl_rewind_init(pl_rewind *rewind)
   rewind->start = head;
   rewind->current = rewind->start;
 
+  /* */
+  rewind->save_state = save_state;
+  rewind->load_state = load_state;
+  rewind->get_state_size = get_state_size;
+  rewind->state_data_size = state_data_size;
+  rewind->state_count = state_count;
+
   return 1;
+}
+
+void pl_rewind_realloc(pl_rewind *rewind)
+{
+  pl_rewind_destroy(rewind);
+  pl_rewind_init(rewind,
+    rewind->save_state,
+    rewind->load_state,
+    rewind->get_state_size);
 }
 
 void pl_rewind_destroy(pl_rewind *rewind)
@@ -71,9 +85,14 @@ void pl_rewind_destroy(pl_rewind *rewind)
   rewind->current = NULL;
 }
 
+void pl_rewind_reset(pl_rewind *rewind)
+{
+  rewind->start = rewind->current;
+}
+
 int pl_rewind_save(pl_rewind *rewind)
 {
-	if (!save_state_to_mem(rewind->current->data))
+	if (!rewind->save_state(rewind->current->data))
     return 0;
 
 	rewind->current = rewind->current->next;
@@ -92,12 +111,10 @@ int pl_rewind_restore(pl_rewind *rewind)
     return 0;
 
   rewind->current = rewind->current->prev;
-  load_state_from_mem(rewind->current->data);
-
-  return 1;
+  return rewind->load_state(rewind->current->data);
 }
 
-int get_psp_max_free_memory()
+static int get_psp_max_free_memory()
 {
 	unsigned char *mem;
 	const int MEM_CHUNK_SIZE = 500*1024; //blocks of 500KBytes

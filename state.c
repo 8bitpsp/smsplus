@@ -36,7 +36,7 @@ int get_save_state_size(void){
 }
 
 
-int save_state_to_mem(unsigned char *stor){
+int save_state_to_mem(void *stor){
 	
 	
     //davex: header is not saved in a memory state
@@ -82,7 +82,7 @@ int save_state_to_mem(unsigned char *stor){
 
 
 
-int load_state_from_mem(unsigned char *stor)
+int load_state_from_mem(void *stor)
 {
     int i;
 
