@@ -235,24 +235,31 @@ int ParseInput()
       /* doesn't trigger any other combination presses. */
       if (on) pad.Buttons &= ~ButtonMask[i];
 
-      if (code & AFI)
+      if (!Rewinding)
       {
-        if (on && (autofire_status == 0)) 
-          input.pad[0] |= CODE_MASK(code);
-      }
-      else if (code & JOY)
-      {
-        if (on) input.pad[0] |= CODE_MASK(code);
-      }
-      else if (code & SYS)
-      {
-        if (on)
+        if (code & AFI)
         {
-          if (CODE_MASK(code) == (INPUT_START | INPUT_PAUSE))
-            input.system |= (IS_GG) ? INPUT_START : INPUT_PAUSE;
+          if (on && (autofire_status == 0)) 
+            input.pad[0] |= CODE_MASK(code);
+          continue;
+        }
+        else if (code & JOY)
+        {
+          if (on) input.pad[0] |= CODE_MASK(code);
+          continue;
+        }
+        else if (code & SYS)
+        {
+          if (on)
+          {
+            if (CODE_MASK(code) == (INPUT_START | INPUT_PAUSE))
+              input.system |= (IS_GG) ? INPUT_START : INPUT_PAUSE;
+          }
+          continue;
         }
       }
-      else if (code & SPC)
+
+      if (code & SPC)
       {
         switch (CODE_MASK(code))
         {
