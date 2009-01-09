@@ -146,31 +146,38 @@ void RunEmulator()
   ClearScreen = 1;
   Rewinding = 0;
 
+pl_rewind_init(&Rewinder,
+save_state_to_mem,
+load_state_from_mem,
+get_save_state_size);
+//pl_rewind_realloc(&Rewinder);
+
+  int frames_until_save = 0;
+
+
   /* Resume sound */
   pl_snd_resume(0);
 
   /* Wait for V. refresh */
   pspVideoWaitVSync();
-pl_rewind_init(&Rewinder,
-  save_state_to_mem,
-  load_state_from_mem,
-  get_save_state_size);
-//pl_rewind_realloc(&Rewinder);
+
   /* Main emulation loop */
   while (!ExitPSP)
   {
     /* Check input */
     if (ParseInput()) break;
 
-    if (Rewinding)
+    /* Rewind/save state */
+    if (!Rewinding)
     {
-      if (!pl_rewind_restore(&Rewinder)) /* At starting point */
-        continue;
+      if (--frames_until_save <= 0)
+      {
+        frames_until_save = Options.RewindSaveRate;
+        pl_rewind_save(&Rewinder);
+      }
     }
-    else
-    {
-      pl_rewind_save(&Rewinder);
-    }
+    else if (!pl_rewind_restore(&Rewinder))
+      continue;  /* At starting point, cannot rewind */
 
     /* Run the system emulation for a frame */
     if (++Frame <= Options.Frameskip)

@@ -2,12 +2,12 @@
 
 #include "rewind.h"
 
-struct rewind_state
+typedef struct rewind_state
 {
   void *data;
   struct rewind_state *prev;
   struct rewind_state *next;
-};
+} rewind_state_t;
 
 static int get_psp_max_free_memory();
 
@@ -24,8 +24,8 @@ int pl_rewind_init(pl_rewind *rewind,
     return 0;
 
   /* First state */
-  struct rewind_state *head, *prev, *cur;
-  if (!(head = (struct rewind_state*)malloc(sizeof(struct rewind_state))))
+  rewind_state_t *head, *prev, *cur;
+  if (!(head = (rewind_state_t*)malloc(sizeof(rewind_state_t))))
     return 0;
   head->data = malloc(state_data_size);
   prev = head;
@@ -34,7 +34,7 @@ int pl_rewind_init(pl_rewind *rewind,
   int i;
   for (i = 1; i < state_count; i++)
   {
-    cur = (struct rewind_state*)malloc(sizeof(struct rewind_state));
+    cur = (rewind_state_t*)malloc(sizeof(rewind_state_t));
     cur->data = malloc(state_data_size);
     prev->next = cur;
     cur->prev = prev;
@@ -45,11 +45,8 @@ int pl_rewind_init(pl_rewind *rewind,
   head->prev = prev;
   prev->next = head;
 
-  /* Set selected node */
-  rewind->start = head;
-  rewind->current = rewind->start;
-
-  /* */
+  /* Init structure */
+  rewind->start = rewind->current = head;
   rewind->save_state = save_state;
   rewind->load_state = load_state;
   rewind->get_state_size = get_state_size;
@@ -70,15 +67,14 @@ void pl_rewind_realloc(pl_rewind *rewind)
 
 void pl_rewind_destroy(pl_rewind *rewind)
 {
-	struct rewind_state *next;
-  rewind->current->prev->next = NULL;
+  rewind->current->prev->next = NULL; /* Prevent infinite loop */
+	rewind_state_t *curr, *next;
 
-	while (rewind->current)
+  for (curr = rewind->current; curr; curr = next)
   {
-    next = rewind->current->next;
+    next = curr->next;
     free(rewind->current->data);
     free(rewind->current);
-    rewind->current = next;
   }
 
   rewind->start = NULL;
@@ -97,7 +93,7 @@ int pl_rewind_save(pl_rewind *rewind)
 
 	rewind->current = rewind->current->next;
 
-  /* Move starting point */
+  /* Move starting point forward */
   if (rewind->current == rewind->start)
     rewind->start = rewind->current->next;
 
