@@ -1,6 +1,11 @@
 /*
-Author: davex
+
+Time rewind
+
+Original Author: davex
 e-mail: efengeler@gmail.com
+
+Adopted and modified for psplib by Akop Karapetyan (dev@psp.akop.org)
 */
 
 #ifndef _PL_REWIND_H

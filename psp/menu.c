@@ -172,10 +172,10 @@ PL_MENU_OPTIONS_BEGIN(ControlModeOptions)
   PL_MENU_OPTION("\026\241\020 cancels, \026\242\020 confirms (Japan)", 1)
 PL_MENU_OPTIONS_END
 PL_MENU_OPTIONS_BEGIN(RewindSaveRateOptions)
-  PL_MENU_OPTION("Every   5 frames", 5)
-  PL_MENU_OPTION("Every  15 frames", 15)
-  PL_MENU_OPTION("Every  30 frames", 30)
-  PL_MENU_OPTION("Every  60 frames", 60)
+  PL_MENU_OPTION("Every 5 frames", 5)
+  PL_MENU_OPTION("Every 15 frames", 15)
+  PL_MENU_OPTION("Every 30 frames", 30)
+  PL_MENU_OPTION("Every 60 frames", 60)
   PL_MENU_OPTION("Every 120 frames", 120)
   PL_MENU_OPTION("Every 240 frames", 240)
 PL_MENU_OPTIONS_END
@@ -191,6 +191,7 @@ PL_MENU_OPTIONS_BEGIN(ButtonMapOptions)
   PL_MENU_OPTION("None", 0)
   /* Special */
   PL_MENU_OPTION("Special: Open Menu", SPC|SPC_MENU)
+  PL_MENU_OPTION("Special: Rewind", SPC|SPC_REWIND)
   /* Joystick */
   PL_MENU_OPTION("Joystick Up",    JOY|INPUT_UP)
   PL_MENU_OPTION("Joystick Down",  JOY|INPUT_DOWN)

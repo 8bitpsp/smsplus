@@ -77,7 +77,7 @@ int save_state_to_mem(void *stor){
     // SN76489 context
     memcpy(stor, SN76489_GetContextPtr(0),  SN76489_GetContextSize() );
     //stor += SN76489_GetContextSize();
-    return 0;
+    return 1;
 }
 
 
@@ -167,7 +167,7 @@ int load_state_from_mem(void *stor)
     for(i = 0; i < PALETTE_SIZE; i++)
         palette_sync(i);
         
-    return 0;
+    return 1;
 }
 
 
