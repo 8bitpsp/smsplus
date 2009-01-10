@@ -16,15 +16,16 @@ int pl_rewind_init(pl_rewind *rewind,
   int (*load_state)(void *),
   int (*get_state_size)())
 {
-	int memory_needed = (int)((float)get_psp_max_free_memory() * 0.85);
+	float memory_needed = (float)get_psp_max_free_memory() * 0.85;
   int state_data_size = get_state_size();
-  int state_count = (int)((float)memory_needed / (float)state_data_size);
+  int state_count = (int)(memory_needed 
+                    / (float)(state_data_size + sizeof(rewind_state_t)));
 
 	if (state_count <= 0)
     return 0;
 
   /* First state */
-  rewind_state_t *head, *prev, *cur;
+  rewind_state_t *head, *prev, *curr;
   if (!(head = (rewind_state_t*)malloc(sizeof(rewind_state_t))))
     return 0;
   head->data = malloc(state_data_size);
@@ -34,11 +35,11 @@ int pl_rewind_init(pl_rewind *rewind,
   int i;
   for (i = 1; i < state_count; i++)
   {
-    cur = (rewind_state_t*)malloc(sizeof(rewind_state_t));
-    cur->data = malloc(state_data_size);
-    prev->next = cur;
-    cur->prev = prev;
-    prev = cur;
+    curr = (rewind_state_t*)malloc(sizeof(rewind_state_t));
+    curr->data = malloc(state_data_size);
+    prev->next = curr;
+    curr->prev = prev;
+    prev = curr;
   }
 
   /* Make circular */
@@ -73,8 +74,8 @@ void pl_rewind_destroy(pl_rewind *rewind)
   for (curr = rewind->current; curr; curr = next)
   {
     next = curr->next;
-    free(rewind->current->data);
-    free(rewind->current);
+    free(curr->data);
+    free(curr);
   }
 
   rewind->start = NULL;
