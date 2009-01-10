@@ -11,7 +11,7 @@ Adopted and modified for psplib by Akop Karapetyan (dev@psp.akop.org)
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "rewind.h"
+#include "pl_rewind.h"
 
 typedef struct rewind_state
 {
