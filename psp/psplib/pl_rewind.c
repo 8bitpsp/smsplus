@@ -1,11 +1,23 @@
-/*
+/* psplib/pl_rewind.c
+   State rewinding routines
 
-Time rewind
+   Copyright (C) 2009 Akop Karapetyan
+   Based on code by DaveX (efengeler@gmail.com)
 
-Original Author: davex
-e-mail: efengeler@gmail.com
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
-Adopted and modified for psplib by Akop Karapetyan (dev@psp.akop.org)
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   Author contact information: dev@psp.akop.org
 */
 
 #include <stdlib.h>
@@ -20,14 +32,14 @@ typedef struct rewind_state
   struct rewind_state *next;
 } rewind_state_t;
 
-static int get_psp_max_free_memory();
+static int get_free_memory();
 
 int pl_rewind_init(pl_rewind *rewind,
   int (*save_state)(void *),
   int (*load_state)(void *),
   int (*get_state_size)())
 {
-	float memory_needed = (float)get_psp_max_free_memory() * 0.85;
+	float memory_needed = (float)get_free_memory() * 0.85;
   int state_data_size = get_state_size();
   int state_count = (int)(memory_needed 
                     / (float)(state_data_size + sizeof(rewind_state_t)));
@@ -58,7 +70,8 @@ int pl_rewind_init(pl_rewind *rewind,
   prev->next = head;
 
   /* Init structure */
-  rewind->start = rewind->current = head;
+  rewind->start = head;
+  rewind->current = NULL;
   rewind->save_state = save_state;
   rewind->load_state = load_state;
   rewind->get_state_size = get_state_size;
@@ -79,10 +92,10 @@ void pl_rewind_realloc(pl_rewind *rewind)
 
 void pl_rewind_destroy(pl_rewind *rewind)
 {
-  rewind->current->prev->next = NULL; /* Cut off loop */
+  rewind->start->prev->next = NULL; /* Prevent infinite loop */
 	rewind_state_t *curr, *next;
 
-  for (curr = rewind->current; curr; curr = next)
+  for (curr = rewind->start; curr; curr = next)
   {
     next = curr->next;
     free(curr->data);
@@ -95,19 +108,23 @@ void pl_rewind_destroy(pl_rewind *rewind)
 
 void pl_rewind_reset(pl_rewind *rewind)
 {
-  rewind->start = rewind->current;
+  rewind->current = NULL;
 }
 
 int pl_rewind_save(pl_rewind *rewind)
 {
-	if (!rewind->save_state(rewind->current->data))
+  rewind_state_t *slot = 
+    (rewind->current) ? rewind->current->next
+                      : rewind->start;
+
+	if (!rewind->save_state(slot->data))
     return 0;
 
-	rewind->current = rewind->current->next;
+	rewind->current = slot;
 
-  /* Move starting point forward */
-  if (rewind->current == rewind->start)
-    rewind->start = rewind->current->next;
+  /* Move starting point forward, if we've reached the start node */
+  if (slot == rewind->start)
+    rewind->start = slot->next;
 
   return 1;
 }
@@ -115,43 +132,45 @@ int pl_rewind_save(pl_rewind *rewind)
 int pl_rewind_restore(pl_rewind *rewind)
 {
   /* Can't go past the starting point */
-  if (rewind->current == rewind->start)
+  if (!rewind->current)
     return 0;
 
-  rewind->current = rewind->current->prev;
-  return rewind->load_state(rewind->current->data);
+  rewind_state_t *slot = rewind->current;
+  rewind->current = 
+    (slot == rewind->start) ? NULL
+                            : rewind->current->prev;
+
+  return rewind->load_state(slot->data);
 }
 
-static int get_psp_max_free_memory()
+static int get_free_memory()
 {
-	unsigned char *mem;
-	const int MEM_CHUNK_SIZE = 500*1024; //blocks of 500KBytes
-	const int MAX_CHUNKS = 64;
-	unsigned char* mem_reserv[MAX_CHUNKS];
-	int total_mem = 0;
-	int i = 0;
-	
-	//initializes
-	for( i = 0; i< MAX_CHUNKS; i++){
-		mem_reserv[i] = NULL;
-	}
-	
-	//allocate
-	for( i=0; i<MAX_CHUNKS; i++){
-		mem = (unsigned char *)malloc(MEM_CHUNK_SIZE);
-		if( mem != NULL){
-			total_mem += MEM_CHUNK_SIZE;
-			mem_reserv[i] = mem;
-		}else{
-			break;
-		}
-	}
-	
-	//free
-	for( i=0; i<MAX_CHUNKS; i++){
-		if( mem_reserv[i] != NULL)
-			free( mem_reserv[i] );
-	}
+  const int 
+    chunk_size = 65536, // 64 kB
+    chunks = 1024; // 65536 * 1024 = 64 MB
+  void *mem_reserv[chunks];
+  int total_mem = 0, i;
+
+  /* Initialize */	
+  for (i = 0; i < chunks; i++)
+    mem_reserv[i] = NULL;
+
+  /* Allocate */
+  for (i = 0; i < chunks; i++)
+  {
+    if (!(mem_reserv[i] = malloc(chunk_size)))
+      break;
+
+    total_mem += chunk_size;
+  }
+
+  /* Free */
+  for (i = 0; i < chunks; i++)
+  {
+    if (!mem_reserv[i])
+      break;
+    free(mem_reserv[i]);
+  }
 	
 	return total_mem;
 }

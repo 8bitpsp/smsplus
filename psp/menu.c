@@ -23,6 +23,7 @@
 #include "pl_psp.h"
 #include "pl_util.h"
 #include "pl_ini.h"
+#include "pl_rewind.h"
 
 #define TAB_QUICKLOAD 0
 #define TAB_STATE     1
@@ -51,6 +52,7 @@
 #define SYSTEM_SOUND_BOOST  0x15
 
 extern PspImage *Screen;
+extern pl_rewind Rewinder;
 
 EmulatorOptions Options;
 
@@ -225,12 +227,13 @@ PL_MENU_ITEMS_BEGIN(OptionMenuDef)
                "\026\250\020 Larger values: faster emulation, faster battery depletion (default: 222MHz)")
   PL_MENU_ITEM("Show FPS counter",    OPTION_SHOW_FPS, ToggleOptions,
                "\026\250\020 Show/hide the frames-per-second counter")
-  PL_MENU_HEADER("Enhancements")
+/*
+  PL_MENU_HEADER("Time rewind")
   PL_MENU_ITEM("Rewind save frequency", OPTION_REWIND_SAVE_RATE,
       RewindSaveRateOptions, "\026\250\020 Change rewind saving frequency")
   PL_MENU_ITEM("Rewind delay", OPTION_REWIND_REPLAY_DELAY,
       RewindReplayDelayOptions, "\026\250\020 Change delay between frames")
-
+*/
   PL_MENU_HEADER("Menu")
   PL_MENU_ITEM("Button mode", OPTION_CONTROL_MODE, ControlModeOptions,
                "\026\250\020 Change OK and Cancel button mapping")
@@ -541,10 +544,11 @@ void DisplayMenu()
         pl_menu_select_option_by_value(item, (void*)UiMetric.Animate);
         item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_AUTOFIRE);
         pl_menu_select_option_by_value(item, (void*)Options.AutoFire);
-        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_REWIND_SAVE_RATE);
-        pl_menu_select_option_by_value(item, (void*)Options.RewindSaveRate);
-        item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_REWIND_REPLAY_DELAY);
-        pl_menu_select_option_by_value(item, (void*)Options.RewindReplayDelay);
+
+        if ((item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_REWIND_SAVE_RATE)))
+          pl_menu_select_option_by_value(item, (void*)Options.RewindSaveRate);
+        if ((item = pl_menu_find_item_by_id(&OptionUiMenu.Menu, OPTION_REWIND_REPLAY_DELAY)))
+          pl_menu_select_option_by_value(item, (void*)Options.RewindReplayDelay);
 
         pspUiOpenMenu(&OptionUiMenu, NULL);
         break;
@@ -770,6 +774,7 @@ int OnMenuOk(const void *uimenu, const void* sel_item)
       {
         ResumeEmulation = 1;
         system_reset();
+        pl_rewind_reset(&Rewinder);
         return 1;
       }
       break;
@@ -845,6 +850,7 @@ int OnQuickloadOk(const void *browser, const void *path)
   else system_reinit();
 
   system_poweron();
+  pl_rewind_reset(&Rewinder);
 
   ResumeEmulation = 1;
   return 1;
@@ -867,6 +873,7 @@ int OnSaveStateOk(const void *gallery, const void *item)
     if (LoadState(path))
     {
       ResumeEmulation = 1;
+      pl_rewind_reset(&Rewinder);
       pl_menu_find_item_by_id(&(((const PspUiGallery*)gallery)->Menu),
         ((const pl_menu_item*)item)->id);
       free(path);

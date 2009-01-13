@@ -18,8 +18,8 @@
 #include "system.h"
 
 PspImage *Screen;
+pl_rewind Rewinder;
 
-static pl_rewind Rewinder;
 static pl_perf_counter FpsCounter;
 static int ClearScreen;
 static int ScreenX, ScreenY, ScreenW, ScreenH;
@@ -77,6 +77,12 @@ void InitEmulator()
 
   sms.use_fm = 0;
   sms.territory = TERRITORY_EXPORT;
+
+  /* Initialize rewinder */
+  pl_rewind_init(&Rewinder,
+    save_state_to_mem,
+    load_state_from_mem,
+    get_save_state_size);
 
   pl_snd_set_callback(0, AudioCallback, NULL);
 }
@@ -146,14 +152,9 @@ void RunEmulator()
   ClearScreen = 1;
   Rewinding = 0;
 
-pl_rewind_init(&Rewinder,
-save_state_to_mem,
-load_state_from_mem,
-get_save_state_size);
 //pl_rewind_realloc(&Rewinder);
 
   int frames_until_save = 0;
-
 
   /* Resume sound */
   pl_snd_resume(0);
@@ -194,7 +195,6 @@ get_save_state_size);
       RenderVideo();
     }
   }
-pl_rewind_destroy(&Rewinder);
 
   /* Stop sound */
   pl_snd_pause(0);
@@ -202,6 +202,8 @@ pl_rewind_destroy(&Rewinder);
 
 void TrashEmulator()
 {
+  pl_rewind_destroy(&Rewinder);
+
   /* Trash screen */
   if (Screen) pspImageDestroy(Screen);
 
