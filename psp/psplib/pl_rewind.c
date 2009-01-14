@@ -44,33 +44,52 @@ int pl_rewind_init(pl_rewind *rewind,
   int state_count = (int)(memory_needed 
                     / (float)(state_data_size + sizeof(rewind_state_t)));
 
-	if (state_count <= 0)
+	if (state_count < 1)
     return 0;
 
   /* First state */
-  rewind_state_t *head, *prev, *curr;
-  if (!(head = (rewind_state_t*)malloc(sizeof(rewind_state_t))))
+  rewind_state_t *prev, *curr;
+  if (!(rewind->start = (rewind_state_t*)malloc(sizeof(rewind_state_t))))
     return 0;
-  head->data = malloc(state_data_size);
-  prev = head;
+
+  if (!(rewind->start->data = malloc(state_data_size)))
+  {
+    free(rewind->start);
+    rewind->start = NULL;
+    return 0;
+  }
+
+  prev = rewind->start;
 
   /* The rest */
   int i;
   for (i = 1; i < state_count; i++)
   {
-    curr = (rewind_state_t*)malloc(sizeof(rewind_state_t));
-    curr->data = malloc(state_data_size);
+    /* If allocation fails, compose a shorter state chain */
+    if (!(curr = (rewind_state_t*)malloc(sizeof(rewind_state_t))))
+    {
+      state_count = i + 1;
+      break;
+    }
+
+    /* If allocation fails, compose a shorter state chain */
+    if (!(curr->data = malloc(state_data_size)))
+    {
+      state_count = i + 1;
+      free(curr);
+      break;
+    }
+
     prev->next = curr;
     curr->prev = prev;
     prev = curr;
   }
 
   /* Make circular */
-  head->prev = prev;
-  prev->next = head;
+  rewind->start->prev = prev;
+  curr->next = rewind->start;
 
   /* Init structure */
-  rewind->start = head;
   rewind->current = NULL;
   rewind->save_state = save_state;
   rewind->load_state = load_state;
@@ -113,18 +132,18 @@ void pl_rewind_reset(pl_rewind *rewind)
 
 int pl_rewind_save(pl_rewind *rewind)
 {
-  rewind_state_t *slot = 
+  rewind_state_t *save_slot = 
     (rewind->current) ? rewind->current->next
                       : rewind->start;
 
-	if (!rewind->save_state(slot->data))
+	if (!rewind->save_state(save_slot->data))
     return 0;
 
-	rewind->current = slot;
+	rewind->current = save_slot;
 
   /* Move starting point forward, if we've reached the start node */
-  if (slot == rewind->start)
-    rewind->start = slot->next;
+  if (save_slot->next == rewind->start)
+    rewind->start = rewind->start->next;
 
   return 1;
 }
@@ -135,12 +154,14 @@ int pl_rewind_restore(pl_rewind *rewind)
   if (!rewind->current)
     return 0;
 
-  rewind_state_t *slot = rewind->current;
-  rewind->current = 
-    (slot == rewind->start) ? NULL
-                            : rewind->current->prev;
+  rewind_state_t *load_slot = rewind->current;
+  if (!rewind->load_state(load_slot->data))
+    return 0;
 
-  return rewind->load_state(slot->data);
+  rewind->current = 
+    (load_slot != rewind->start) ? rewind->current->prev : NULL;
+
+  return 1;
 }
 
 static int get_free_memory()
@@ -173,5 +194,16 @@ static int get_free_memory()
   }
 	
 	return total_mem;
+}
+
+void deallocate(rewind_state_t *start)
+{
+	rewind_state_t *next;
+  for (; start; start = next)
+  {
+    next = start->next;
+    free(start->data);
+    free(start);
+  }
 }
 
