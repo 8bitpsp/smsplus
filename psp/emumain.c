@@ -177,8 +177,14 @@ void RunEmulator()
         pl_rewind_save(&Rewinder);
       }
     }
-    else if (!pl_rewind_restore(&Rewinder))
-      continue;  /* At starting point, cannot rewind */
+    else
+    {
+      if (!pl_rewind_restore(&Rewinder))
+        continue;  /* At starting point, cannot rewind */
+
+      if (++frames_until_save >= Options.RewindSaveRate)
+        frames_until_save = 0;
+    }
 
     /* Run the system emulation for a frame */
     if (++Frame <= Options.Frameskip)
