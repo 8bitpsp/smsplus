@@ -174,12 +174,8 @@ PL_MENU_OPTIONS_BEGIN(ControlModeOptions)
   PL_MENU_OPTION("\026\241\020 cancels, \026\242\020 confirms (Japan)", 1)
 PL_MENU_OPTIONS_END
 PL_MENU_OPTIONS_BEGIN(RewindSaveRateOptions)
-  PL_MENU_OPTION("Every 5 frames", 5)
-  PL_MENU_OPTION("Every 15 frames", 15)
-  PL_MENU_OPTION("Every 30 frames", 30)
-  PL_MENU_OPTION("Every 60 frames", 60)
-  PL_MENU_OPTION("Every 120 frames", 120)
-  PL_MENU_OPTION("Every 240 frames", 240)
+  PL_MENU_OPTION("Smoother", 2)
+  PL_MENU_OPTION("Longer", 5)
 PL_MENU_OPTIONS_END
 PL_MENU_OPTIONS_BEGIN(RewindReplayDelayOptions)
   PL_MENU_OPTION("50 ms",   50)
@@ -229,7 +225,7 @@ PL_MENU_ITEMS_BEGIN(OptionMenuDef)
                "\026\250\020 Show/hide the frames-per-second counter")
 /*
   PL_MENU_HEADER("Time rewind")
-  PL_MENU_ITEM("Rewind save frequency", OPTION_REWIND_SAVE_RATE,
+  PL_MENU_ITEM("Rewind recording mode", OPTION_REWIND_SAVE_RATE,
       RewindSaveRateOptions, "\026\250\020 Change rewind saving frequency")
   PL_MENU_ITEM("Rewind delay", OPTION_REWIND_REPLAY_DELAY,
       RewindReplayDelayOptions, "\026\250\020 Change delay between frames")

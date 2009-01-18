@@ -48,7 +48,7 @@ int pl_rewind_init(pl_rewind *rewind,
     return 0;
 
   /* First state */
-  rewind_state_t *prev, *curr;
+  rewind_state_t *prev, *curr = NULL;
   if (!(rewind->start = (rewind_state_t*)malloc(sizeof(rewind_state_t))))
     return 0;
 
@@ -150,16 +150,13 @@ int pl_rewind_save(pl_rewind *rewind)
 
 int pl_rewind_restore(pl_rewind *rewind)
 {
-  /* Can't go past the starting point */
-  if (!rewind->current)
-    return 0;
-
   rewind_state_t *load_slot = rewind->current;
   if (!rewind->load_state(load_slot->data))
     return 0;
 
-  rewind->current = 
-    (load_slot != rewind->start) ? rewind->current->prev : NULL;
+  /* Can't go past the starting point */
+  if (load_slot != rewind->start)
+    rewind->current = rewind->current->prev;
 
   return 1;
 }
