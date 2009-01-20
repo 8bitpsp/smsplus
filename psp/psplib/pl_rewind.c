@@ -193,14 +193,3 @@ static int get_free_memory()
 	return total_mem;
 }
 
-void deallocate(rewind_state_t *start)
-{
-	rewind_state_t *next;
-  for (; start; start = next)
-  {
-    next = start->next;
-    free(start->data);
-    free(start);
-  }
-}
-
