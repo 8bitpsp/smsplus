@@ -151,7 +151,7 @@ int pl_rewind_save(pl_rewind *rewind)
 int pl_rewind_restore(pl_rewind *rewind)
 {
   rewind_state_t *load_slot = rewind->current;
-  if (!rewind->load_state(load_slot->data))
+  if (!(load_slot && rewind->load_state(load_slot->data)))
     return 0;
 
   /* Can't go past the starting point */
