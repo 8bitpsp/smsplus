@@ -111,7 +111,7 @@ unsigned char *cpu_writemap[64];
 #endif
 
 /* big flags array for ADD/ADC/SUB/SBC/CP results */
-#define BIG_FLAGS_ARRAY 	1
+#define BIG_FLAGS_ARRAY     0
 
 /* Set to 1 for a more exact (but somewhat slower) Z80 emulation */
 #define Z80_EXACT			1

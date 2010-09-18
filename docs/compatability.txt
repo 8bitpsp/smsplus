@@ -8,6 +8,8 @@
 
  Uses TMS9918 display modes which are not supported yet.
 
+ UPDATE: Fixed for v1.3!
+
  Y's (J)
 
  Uses specific features of SMS 1 VDP.

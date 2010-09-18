@@ -2,6 +2,18 @@
 #ifndef _VDP_H_
 #define _VDP_H_
 
+/*
+    vdp1
+
+    mode 4 when m4 set and m1 reset
+
+    vdp2
+
+    mode 4 when m4 set and m2,m1 != 1,0
+
+
+*/
+
 /* Display timing (NTSC) */
 
 #define MASTER_CLOCK        3579545
@@ -32,6 +44,7 @@ typedef struct
     uint8 vint_pending;
     uint8 hint_pending;
     uint16 cram_latch;
+    uint8 bd;
 } vdp_t;
 
 /* Global data */

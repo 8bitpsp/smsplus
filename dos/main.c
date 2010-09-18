@@ -34,7 +34,7 @@ int main (int argc, char **argv)
     if(argc < 2)
     {
         printf("\n%s\n", APP_NAME);
-        printf("Copyright (C) Charles MacDonald 1998-2004\n");
+        printf("Copyright (C) Charles MacDonald 1998-2007\n");
         printf("Version %s, build date: %s, %s\n", APP_VERSION, __DATE__, __TIME__);
         printf("Usage: sp <filename.ext> [-options]\n");
         printf("Type 'sp -help' for a summary of the available options\n");

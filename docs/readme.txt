@@ -4,11 +4,16 @@
 
  A free, open-source Sega Master System and Game Gear emulator.
 
- Version 1.2
+ Version 1.3
  by Charles MacDonald
 
  What's New
  ----------
+
+ [Version 1.3]
+ - Fixed last entry in CRC lookup table.
+ - Added TMS9918 display mode support for SMS2 and GG video chips.
+ - Added very preliminary Windows port using Allegro.
 
  [Version 1.2]
 
@@ -290,7 +295,7 @@
  Legal
  -----
 
- SMS Plus is Copyright (C) 1998-2004  Charles MacDonald
+ SMS Plus is Copyright (C) 1998-2007  Charles MacDonald
 
  The source code is distributed under the terms of the GNU General Public
  License.

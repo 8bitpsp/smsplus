@@ -15,7 +15,7 @@ extern "C" {
   #define EMU2413_API
 #endif
 
-#ifdef PSP
+#if 0
 #define PI 3.14159265358979
 #endif
 

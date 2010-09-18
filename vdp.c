@@ -5,6 +5,14 @@
 #include "shared.h"
 #include "hvc.h"
 
+static const uint8 tms_crom[] =
+{
+    0x00, 0x00, 0x08, 0x0C,
+    0x10, 0x30, 0x01, 0x3C,
+    0x02, 0x03, 0x05, 0x0F,
+    0x04, 0x33, 0x15, 0x3F
+};
+
 /* Mark a pattern as dirty */
 #define MARK_BG_DIRTY(addr)                                \
 {                                                          \
@@ -51,14 +59,51 @@ void vdp_reset(void)
 
 void viewport_check(void)
 {
+    int i;
+
     int m1 = (vdp.reg[1] >> 4) & 1;
     int m3 = (vdp.reg[1] >> 3) & 1;
     int m2 = (vdp.reg[0] >> 1) & 1;
     int m4 = (vdp.reg[0] >> 2) & 1;
-//  int m5 = (vdp.reg[1] >> 2) & 1;
-//  vdp.mode = (m5 << 4 | m4 << 3 | m3 << 2 | m2 << 1 | m1 << 0);
 
     vdp.mode = (m4 << 3 | m3 << 2 | m2 << 1 | m1 << 0);
+
+    // check if this is switching out of tms
+    if(!IS_GG)
+    {
+        if(m4)
+        {
+            /* Restore SMS palette */
+            for(i = 0; i < PALETTE_SIZE; i++)
+            {
+                palette_sync(i, 1);
+            }
+        }
+        else
+        {
+            /* Load TMS9918 palette */
+            for(i = 0; i < PALETTE_SIZE; i++)
+            {
+                int r, g, b;
+    
+                r = (tms_crom[i & 0x0F] >> 0) & 3;
+                g = (tms_crom[i & 0x0F] >> 2) & 3;
+                b = (tms_crom[i & 0x0F] >> 4) & 3;
+        
+                r = sms_cram_expand_table[r];
+                g = sms_cram_expand_table[g];
+                b = sms_cram_expand_table[b];
+            
+                bitmap.pal.color[i][0] = r;
+                bitmap.pal.color[i][1] = g;
+                bitmap.pal.color[i][2] = b;
+            
+                pixel[i] = MAKE_PIXEL(r, g, b);
+            
+                bitmap.pal.dirty[i] = bitmap.pal.update = 1;
+            }
+        }
+    }
 
     /* Check for extended modes when M4 and M2 are set */
     if((vdp.reg[0] & 0x06) == 0x06)
@@ -123,6 +168,9 @@ void viewport_check(void)
     vdp.pg = (vdp.reg[4] << 11) & 0x3800;
     vdp.sa = (vdp.reg[5] <<  7) & 0x3F80;
     vdp.sg = (vdp.reg[6] << 11) & 0x3800;
+
+    render_bg  = (vdp.mode & 8) ? render_bg_sms  : render_bg_tms;
+    render_obj = (vdp.mode & 8) ? render_obj_sms : render_obj_tms;
 }
 
 
@@ -157,11 +205,29 @@ void vdp_reg_w(uint8 r, uint8 d)
 
         case 0x02: /* Name Table A Base Address */
             vdp.ntab = (vdp.reg[2] << 10) & 0x3800;
+            vdp.pn = (vdp.reg[2] << 10) & 0x3C00;
             viewport_check();
+            break;
+
+        case 0x03:
+            vdp.ct = (vdp.reg[3] <<  6) & 0x3FC0;
+            break;
+
+        case 0x04:
+            vdp.pg = (vdp.reg[4] << 11) & 0x3800;
             break;
 
         case 0x05: /* Sprite Attribute Table Base Address */
             vdp.satb = (vdp.reg[5] << 7) & 0x3F00;
+            vdp.sa = (vdp.reg[5] <<  7) & 0x3F80;
+            break;
+
+        case 0x06:
+            vdp.sg = (vdp.reg[6] << 11) & 0x3800;
+            break;
+
+        case 0x07:
+            vdp.bd = (vdp.reg[7] & 0x0F);
             break;
     }
 }
@@ -195,7 +261,7 @@ void vdp_write(int offset, uint8 data)
                     if(data != vdp.cram[index])
                     {
                         vdp.cram[index] = data;
-                        palette_sync(index);
+                        palette_sync(index, 0);
                     }
                     break;
             }
@@ -309,7 +375,7 @@ void gg_vdp_write(int offset, uint8 data)
                         vdp.cram_latch = (vdp.cram_latch & 0x00FF) | ((data & 0xFF) << 8);
                         vdp.cram[(vdp.addr & 0x3E) | (0)] = (vdp.cram_latch >> 0) & 0xFF;
                         vdp.cram[(vdp.addr & 0x3E) | (1)] = (vdp.cram_latch >> 8) & 0xFF;
-                        palette_sync((vdp.addr >> 1) & 0x1F);
+                        palette_sync((vdp.addr >> 1) & 0x1F, 0);
                     }
                     else
                     {
@@ -382,7 +448,7 @@ void md_vdp_write(int offset, uint8 data)
                     if(data != vdp.cram[index])
                     {
                         vdp.cram[index] = data;
-                        palette_sync(index);
+                        palette_sync(index, 0);
                     }
                     break;
             }

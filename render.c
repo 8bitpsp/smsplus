@@ -5,44 +5,12 @@
 
 #include "shared.h"
 
-static const uint8 tms_palette[16][3] = {
-    {   0,   0,   0}, /* Transparent */
-    {   0,   0,   0}, /* Black */
-    {  33, 200,  66}, 
-    {  94, 220, 120},
-    {  84,  85, 237},
-    { 125, 118, 252},
-    { 212,  82,  77},
-    {  66, 235, 245},
-    { 252,  85,  84},
-    { 255, 121, 120},
-    { 212, 193,  84},
-    { 230, 206, 128},
-    {  33, 176,  59},
-    { 201,  91, 186},
-    { 204, 204, 204},
-    { 255, 255, 255},
-};
-
-void set_tms_palette(void)
-{
-    int i;
-    for(i = 0; i < PALETTE_SIZE; i++)
-    {
-        bitmap.pal.color[i][0] = tms_palette[i & 0x0F][0];
-        bitmap.pal.color[i][1] = tms_palette[i & 0x0F][1];
-        bitmap.pal.color[i][2] = tms_palette[i & 0x0F][2];
-        bitmap.pal.dirty[i] = 1;
-    }
-    bitmap.pal.update = 1;
-}
-
-static uint8 sms_cram_expand_table[4];
-static uint8 gg_cram_expand_table[16];
+uint8 sms_cram_expand_table[4];
+uint8 gg_cram_expand_table[16];
 
 /* Background drawing function */
-void (*render_bg)(int line);
-void (*render_obj)(int line);
+void (*render_bg)(int line) = NULL;
+void (*render_obj)(int line) = NULL;
 
 /* Pointer to output buffer */
 uint8 *linebuf;
@@ -138,6 +106,8 @@ void render_init(void)
     int i, j;
     int bx, sx, b, s, bp, bf, sf, c;
 
+    make_tms_tables();
+
     /* Generate 64k of data for the look up table */
     for(bx = 0; bx < 0x100; bx++)
     {
@@ -172,10 +142,6 @@ void render_init(void)
                     /* Underlying pixel is high priority */
                     if(b)
                     {
-                        // opaque spr pixel goes under high priority
-                        // and opaque bg pixel;
-                        // keep sprite marker to retain information
-                        // that sprite is there
                         c = bf | 0x40;
                     }
                     else
@@ -256,7 +222,7 @@ void render_reset(void)
     /* Clear palette */
     for(i = 0; i < PALETTE_SIZE; i++)
     {
-        palette_sync(i);
+        palette_sync(i, 1);
     }
 
     /* Invalidate pattern cache */
@@ -278,12 +244,6 @@ void render_line(int line)
     if(line >= vdp.height)
         return;
 
-	if((line < bitmap.viewport.y) ||
-	   (line > (bitmap.viewport.y + bitmap.viewport.h)))
-	{
-		return;
-	}
-
     /* Point to current line in output buffer */
     linebuf = (bitmap.depth == 8) ? &bitmap.data[(line * bitmap.pitch)] : &internal_buffer[0];
 
@@ -298,10 +258,12 @@ void render_line(int line)
     else
     {
         /* Draw background */
-        render_bg(line);
+        if(render_bg != NULL)
+            render_bg(line);
 
         /* Draw sprites */
-        render_obj(line);
+        if(render_obj != NULL)
+            render_obj(line);
 
         /* Blank leftmost column of display */
         if(vdp.reg[0] & 0x20)
@@ -551,8 +513,6 @@ void update_bg_pattern_cache(void)
     int i;
     uint8 x, y;
     uint16 name;
-	int yLookup1;
-	int yLookup2;
 
     if(!bg_list_index) return;
 
@@ -563,9 +523,6 @@ void update_bg_pattern_cache(void)
 
         for(y = 0; y < 8; y++)
         {
-			yLookup1 = y << 3;
-			yLookup2 = (y ^ 7) << 3;
-
             if(bg_name_dirty[name] & (1 << y))
             {
                 uint8 *dst = &bg_pattern_cache[name << 6];
@@ -577,10 +534,10 @@ void update_bg_pattern_cache(void)
                 for(x = 0; x < 8; x++)
                 {
                     uint8 c = (temp >> (x << 2)) & 0x0F;
-                    dst[0x00000 | yLookup1 | (x)] = (c);
-                    dst[0x08000 | yLookup1 | (x ^ 7)] = (c);
-                    dst[0x10000 | yLookup2 | (x)] = (c);
-                    dst[0x18000 | yLookup2 | (x ^ 7)] = (c);
+                    dst[0x00000 | (y << 3) | (x)] = (c);
+                    dst[0x08000 | (y << 3) | (x ^ 7)] = (c);
+                    dst[0x10000 | ((y ^ 7) << 3) | (x)] = (c);
+                    dst[0x18000 | ((y ^ 7) << 3) | (x ^ 7)] = (c);
                 }
             }
         }
@@ -589,10 +546,18 @@ void update_bg_pattern_cache(void)
     bg_list_index = 0;
 }
 
+
 /* Update a palette entry */
-void palette_sync(int index)
+void palette_sync(int index, int force)
 {
     int r, g, b;
+
+    // unless we are forcing an update,
+    // if not in mode 4, exit
+
+
+    if(IS_SMS && !force && ((vdp.reg[0] & 4) == 0) )
+        return;
 
     if(IS_GG)
     {
@@ -600,7 +565,7 @@ void palette_sync(int index)
         r = (vdp.cram[(index << 1) | (0)] >> 0) & 0x0F;
         g = (vdp.cram[(index << 1) | (0)] >> 4) & 0x0F;
         b = (vdp.cram[(index << 1) | (1)] >> 0) & 0x0F;
-
+    
         r = gg_cram_expand_table[r];
         g = gg_cram_expand_table[g];
         b = gg_cram_expand_table[b];
@@ -611,17 +576,17 @@ void palette_sync(int index)
         r = (vdp.cram[index] >> 0) & 3;
         g = (vdp.cram[index] >> 2) & 3;
         b = (vdp.cram[index] >> 4) & 3;
-
+    
         r = sms_cram_expand_table[r];
         g = sms_cram_expand_table[g];
         b = sms_cram_expand_table[b];
     }
-
+    
     bitmap.pal.color[index][0] = r;
     bitmap.pal.color[index][1] = g;
     bitmap.pal.color[index][2] = b;
 
-    pixel[index] = MAKE_PIXEL(r,g,b);
+    pixel[index] = MAKE_PIXEL(r, g, b);
 
     bitmap.pal.dirty[index] = bitmap.pal.update = 1;
 }

@@ -43,6 +43,10 @@
 #include <math.h>
 #include "emu2413.h"
 
+#ifndef PI
+#define PI M_PI
+#endif
+
 #if defined(_MSC_VER)
 #define INLINE __inline
 #elif defined(__GNUC__)

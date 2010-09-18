@@ -21,7 +21,7 @@ rominfo_t game_list[] = {
     {0xA577CE46, MAPPER_CODIES, DISPLAY_PAL, TERRITORY_EXPORT, "Micro Machines"},
     {0x8813514B, MAPPER_CODIES, DISPLAY_PAL, TERRITORY_EXPORT, "Excellent Dizzy (Proto)"},
     {0xAA140C9C, MAPPER_CODIES, DISPLAY_PAL, TERRITORY_EXPORT, "Excellent Dizzy (Proto - GG)"}, 
-    {-1        , -1  , NULL},
+    {-1        , -1  , -1, -1, NULL},
 };
 
 int load_rom(char *filename)
@@ -44,8 +44,6 @@ int load_rom(char *filename)
     }
     else
     {
-        strcpy(game_name, filename);
-
         FILE *fd = NULL;
 
         fd = fopen(filename, "rb");

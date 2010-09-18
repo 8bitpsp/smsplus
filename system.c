@@ -45,14 +45,22 @@ void system_frame(int skip_render)
          sms.paused = 0;
     }
 
-    for(vdp.line = 0; vdp.line < lpf; vdp.line++)
+    text_counter = 0;
+
+    /* End of frame, parse sprites for line 0 on line 261 (VCount=$FF) */
+    if(vdp.mode <= 7)
+        parse_line(0);
+
+    for(vdp.line = 0; vdp.line < lpf;)
     {
         z80_execute(227);
 
         iline = iline_table[vdp.extended];
 
         if(!skip_render)
+        {
             render_line(vdp.line);
+        }
 
         if(vdp.line <= iline)
         {
@@ -89,6 +97,11 @@ void system_frame(int skip_render)
         }
 
         sound_update(vdp.line);
+
+        ++vdp.line;
+
+        if(vdp.mode <= 7)
+            parse_line(vdp.line);
     }
 }
 

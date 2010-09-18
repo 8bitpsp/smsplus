@@ -7,7 +7,7 @@ PSPLIB=$(PSPAPP)/psplib
 DATA=$(PSPAPP)/data
 
 PSP_APP_NAME=SMS Plus PSP
-PSP_APP_VER=1.2.55
+PSP_APP_VER=1.3.1
 
 TARGET=smsppsp
 EXTRA_TARGETS=EBOOT.PBP
@@ -15,7 +15,7 @@ PSP_EBOOT_TITLE=$(PSP_APP_NAME) $(PSP_APP_VER)
 PSP_EBOOT_ICON=$(DATA)/smsp-icon.png
 
 BUILD_Z80=$(Z80)/z80.o
-BUILD_APP=sms.o	pio.o memz80.o render.o vdp.o \
+BUILD_APP=sms.o	pio.o memz80.o render.o vdp.o tms.o \
           system.o error.o fileio.o state.o loadrom.o
 BUILD_MINIZIP=unzip/ioapi.o unzip/unzip.o
 BUILD_SOUND=$(SOUND)/sound.o $(SOUND)/sn76489.o $(SOUND)/emu2413.o \

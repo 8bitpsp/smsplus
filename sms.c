@@ -45,6 +45,7 @@ void writemem_mapper_codies(int offset, int data)
 void sms_init(void)
 {
     z80_init();
+
     sms_reset();
 
     /* Default: open bus */
@@ -119,7 +120,8 @@ void sms_reset(void)
 {
     int i;
 
-    z80_reset(0);
+    
+    z80_reset(NULL);
     z80_set_irq_callback(sms_irq_callback);
 
     /* Clear SMS context */

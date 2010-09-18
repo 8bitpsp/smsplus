@@ -1,6 +1,6 @@
 
-#ifndef _TYPES_H_
-#define _TYPES_H_
+#ifndef __TYPES_H_
+#define __TYPES_H_
 
 typedef unsigned char uint8;
 typedef unsigned short int uint16;
@@ -14,5 +14,5 @@ typedef signed short int int16;
 typedef signed long int int32;
 #endif
 
-#endif /* _TYPES_H_ */
+#endif /* __TYPES_H_ */
 

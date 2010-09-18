@@ -27,6 +27,7 @@
 #include "memz80.h"
 #include "vdp.h"
 #include "render.h"
+#include "tms.h"
 #include "sn76489.h"
 #include "emu2413.h"
 #include "ym2413.h"
