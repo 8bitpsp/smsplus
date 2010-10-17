@@ -56,6 +56,7 @@ extern pl_rewind Rewinder;
 
 EmulatorOptions Options;
 
+static int ControlsModified;
 static int TabIndex;
 static int ResumeEmulation;
 static PspImage *Background;
@@ -64,7 +65,7 @@ static PspImage *NoSaveIcon;
 static const char *QuickloadFilter[] = { "SMS", "GG", "ZIP", '\0' },
   PresentSlotText[] = "\026\244\020 Save\t\026\001\020 Load\t\026\243\020 Delete",
   EmptySlotText[] = "\026\244\020 Save",
-  ControlHelpText[] = "\026\250\020 Change mapping\t\026\001\020 Save to \271\t\026\243\020 Load defaults";
+  ControlHelpText[] = "\026\250\020 Change mapping\t\026\243\020 Load defaults";
 
 pl_file_path CurrentGame = "",
              GamePath,
@@ -415,6 +416,9 @@ void InitMenu()
   sprintf(ScreenshotPath, "ms0:/PSP/PHOTO/%s/", PSP_APP_NAME);
   sprintf(GamePath, "%s", pl_psp_get_app_directory());
 
+  if (!pl_file_exists(SaveStatePath))
+    pl_file_mkdir_recursive(SaveStatePath);
+
   /* Initialize options */
   LoadOptions();
 
@@ -471,6 +475,7 @@ void InitMenu()
   UiMetric.MenuDecorColor = PSP_COLOR_YELLOW;
   UiMetric.DialogFogColor = COLOR(0, 0, 0, 88);
   UiMetric.TitlePadding = 4;
+
   UiMetric.TitleColor = PSP_COLOR_WHITE;
   UiMetric.MenuFps = 30;
   UiMetric.TabBgColor = COLOR(0x74,0x74,0xbe,0xff);
@@ -505,7 +510,13 @@ void DisplayMenu()
         /* Load current button mappings */
         for (item = ControlUiMenu.Menu.items, i = 0; item; item = item->next, i++)
           pl_menu_select_option_by_value(item, (void*)ActiveConfig.ButtonMap[i]);
+
+        ControlsModified = 0;
         pspUiOpenMenu(&ControlUiMenu, NULL);
+
+        if (ControlsModified)
+          SaveButtonConfig();
+
         break;
       case TAB_QUICKLOAD:
         pspUiOpenBrowser(&QuickloadBrowser,
@@ -684,6 +695,7 @@ int  OnMenuItemChanged(const struct PspUiMenu *uimenu,
 {
   if (uimenu == &ControlUiMenu)
   {
+    ControlsModified = 1;
     ActiveConfig.ButtonMap[item->id] = (unsigned int)option->value;
   }
   else
@@ -804,6 +816,7 @@ int OnMenuButtonPress(const struct PspUiMenu *uimenu,
 
       /* Load default mapping */
       InitButtonConfig();
+      ControlsModified = 1;
 
       /* Modify the menu */
       for (item = ControlUiMenu.Menu.items, i = 0; item; item = item->next, i++)
@@ -1037,6 +1050,7 @@ static void DisplayStateTab()
       item->param = NoSaveIcon;
       pl_menu_set_item_help_text(item, EmptySlotText);
     }
+
   }
 
   free(path);

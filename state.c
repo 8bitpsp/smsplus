@@ -5,6 +5,8 @@
 
 #include "shared.h"
 
+void viewport_check();
+
 int get_save_state_size(void){
     int ssize = 0;
     
@@ -164,7 +166,9 @@ int load_state_from_mem(void *stor)
     /* Restore palette */
     for(i = 0; i < PALETTE_SIZE; i++)
         palette_sync(i, 1);
-        
+ 
+    viewport_check();
+
     return 1;
 }
 
@@ -278,5 +282,7 @@ void system_load_state(void *fd)
     /* Restore palette */
     for(i = 0; i < PALETTE_SIZE; i++)
         palette_sync(i, 1);
+
+    viewport_check();
 }
 
